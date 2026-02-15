@@ -1,0 +1,14 @@
+docker-compose.yml
+.env
+.env.*
+!.env.example
+.vscode
+.git
+.DS_Store
+.venv
+.pytest_cache
+.ruff_cache
+.ruff_cache
+.vscode
+.idea
+__pycache__
