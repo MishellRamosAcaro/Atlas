@@ -20,10 +20,13 @@ async def test_register_creates_user(db_session):
     user = await auth_service.register(
         email="new@example.com",
         password="password123",
-        name="New User",
+        first_name="New",
+        last_name="User",
     )
     await db_session.commit()
     assert user.email == "new@example.com"
+    assert user.first_name == "New"
+    assert user.last_name == "User"
     assert user.name == "New User"
     assert user.password_hash is not None
     assert pwd_context.verify("password123", user.password_hash)
@@ -36,7 +39,8 @@ async def test_register_duplicate_email_raises(db_session):
     user_repo = UserRepository(db_session)
     await user_repo.create(
         email="existing@example.com",
-        name="Existing",
+        first_name="Existing",
+        last_name="User",
         password_hash="hash",
     )
     await db_session.commit()
@@ -46,6 +50,8 @@ async def test_register_duplicate_email_raises(db_session):
         await auth_service.register(
             email="existing@example.com",
             password="password",
+            first_name="Other",
+            last_name="User",
         )
     assert exc_info.value.status_code == 409
 
@@ -57,6 +63,8 @@ async def test_local_login_success(db_session):
     await auth_service.register(
         email="login@example.com",
         password="secret123",
+        first_name="Login",
+        last_name="User",
     )
     await db_session.commit()
 
@@ -76,6 +84,8 @@ async def test_local_login_wrong_password_raises(db_session):
     await auth_service.register(
         email="login@example.com",
         password="secret123",
+        first_name="Login",
+        last_name="User",
     )
     await db_session.commit()
 
@@ -94,6 +104,8 @@ async def test_logout_local_invalidates_token(db_session):
     await auth_service.register(
         email="logout@example.com",
         password="pass",
+        first_name="Logout",
+        last_name="User",
     )
     await db_session.commit()
     _, refresh_token = await auth_service.local_login(

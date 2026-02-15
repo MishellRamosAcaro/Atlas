@@ -28,14 +28,16 @@ class UserRepository:
     async def create(
         self,
         email: str,
-        name: str,
+        first_name: str,
+        last_name: str,
         password_hash: str | None = None,
         roles: list[str] | None = None,
     ) -> User:
         """Create a new user."""
         user = User(
             email=email,
-            name=name,
+            first_name=first_name,
+            last_name=last_name,
             password_hash=password_hash,
             roles=roles or ["user"],
         )

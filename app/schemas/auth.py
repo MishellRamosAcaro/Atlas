@@ -25,7 +25,8 @@ class RegisterRequest(BaseModel):
 
     email: EmailStr = Field(..., description="User email")
     password: str = Field(..., min_length=8, description="Password")
-    name: str | None = Field(None, description="Display name")
+    first_name: str = Field(..., description="First name")
+    last_name: str = Field(..., description="Last name")
 
 
 class TokenRequest(BaseModel):

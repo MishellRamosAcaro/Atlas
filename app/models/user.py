@@ -25,7 +25,8 @@ class User(Base):
         default=uuid.uuid4,
     )
     email: Mapped[str] = mapped_column(Text, unique=True, nullable=False, index=True)
-    name: Mapped[str] = mapped_column(Text, nullable=False)
+    first_name: Mapped[str] = mapped_column(Text, nullable=False)
+    last_name: Mapped[str] = mapped_column(Text, nullable=False)
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
     roles: Mapped[list[str]] = mapped_column(
         ARRAY(Text),
@@ -64,6 +65,11 @@ class User(Base):
     def __repr__(self) -> str:
         """String representation."""
         return f"<User(id={self.id!r}, email={self.email!r})>"
+
+    @property
+    def name(self) -> str:
+        """Full display name (first_name + last_name)."""
+        return f"{self.first_name} {self.last_name}".strip() or self.email
 
     @property
     def can_login(self) -> bool:

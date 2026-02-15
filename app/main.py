@@ -56,4 +56,4 @@ from app.middleware.security_headers import SecurityHeadersMiddleware
 
 app.add_middleware(SecurityHeadersMiddleware)
 
-app.include_router(auth.router, prefix="/v1/auth", tags=["auth"])
+app.include_router(auth.router, prefix="/auth", tags=["Authentication"])

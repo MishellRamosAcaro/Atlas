@@ -80,7 +80,10 @@ class AuthService:
         """Process Google OAuth login. Returns (user, refresh_token)."""
         payload = await self.validate_google_id_token(id_token)
         email = payload["email"]
-        name = payload.get("name") or email.split("@")[0]
+        full_name = payload.get("name") or email.split("@")[0]
+        parts = full_name.strip().split(maxsplit=1)
+        first_name = parts[0] if parts else email.split("@")[0]
+        last_name = parts[1] if len(parts) > 1 else ""
         provider_user_id = payload.get("sub", "")
         provider = "google"
 
@@ -108,7 +111,8 @@ class AuthService:
             else:
                 user = await self._user_repo.create(
                     email=email,
-                    name=name,
+                    first_name=first_name,
+                    last_name=last_name,
                     password_hash=None,
                 )
                 await self._oauth_repo.create(user.id, provider, provider_user_id)
@@ -137,7 +141,11 @@ class AuthService:
         return user, refresh_token_raw
 
     async def register(
-        self, email: str, password: str, name: str | None = None
+        self,
+        email: str,
+        password: str,
+        first_name: str,
+        last_name: str,
     ) -> User:
         """Register a new user with email/password."""
         existing = await self._user_repo.get_by_email(email)
@@ -147,10 +155,10 @@ class AuthService:
                 detail="Email already registered",
             )
         password_hash = pwd_context.hash(password)
-        display_name = name or email.split("@")[0]
         user = await self._user_repo.create(
             email=email,
-            name=display_name,
+            first_name=first_name,
+            last_name=last_name,
             password_hash=password_hash,
         )
         return user

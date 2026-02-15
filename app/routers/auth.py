@@ -109,7 +109,8 @@ async def register(
     await auth_service.register(
         email=body.email,
         password=body.password,
-        name=body.name,
+        first_name=body.first_name,
+        last_name=body.last_name,
     )
     return {"message": "Registration successful"}
 
