@@ -20,7 +20,8 @@ def sample_user():
     return User(
         id=uuid.uuid4(),
         email="test@example.com",
-        name="Test User",
+        first_name="Test",
+        last_name="User",
         password_hash=None,
         roles=["user"],
         is_active=True,

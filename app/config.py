@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     max_sessions_per_user: int = 2
     idle_timeout_days: int = 7
 
+    # Login lockout (brute-force protection)
+    max_failed_login_attempts: int = 5
+    lockout_minutes: int = 15
+
     # Google OAuth
     google_client_id: str = ""
     google_client_secret: str = ""

@@ -109,6 +109,22 @@ Minimum required:
 
 ## 7. Local Execution & Configuration
 
+### Virtual environment (mandatory in development)
+
+**In local development only**, always use the Python virtual environment when executing any Python-related command (pytest, uvicorn, ruff, black, etc.). In production the application runs inside Docker.
+
+Examples:
+```bash
+# Activate venv first, then run
+source .venv/bin/activate
+pytest tests/ -v
+uvicorn app.main:app --reload
+
+# Or invoke via venv binary directly
+.venv/bin/python -m pytest tests/ -v
+.venv/bin/uvicorn app.main:app --reload
+```
+
 ### Run locally
 
 ```bash

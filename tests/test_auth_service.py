@@ -98,6 +98,40 @@ async def test_local_login_wrong_password_raises(db_session):
 
 
 @pytest.mark.asyncio
+async def test_local_login_lockout_after_max_failed_attempts(db_session, monkeypatch):
+    """After max failed attempts, login returns 429 lockout."""
+    from app.repositories.login_lockout_repository import settings as lockout_settings
+
+    monkeypatch.setattr(lockout_settings, "max_failed_login_attempts", 3)
+    monkeypatch.setattr(lockout_settings, "lockout_minutes", 15)
+
+    auth_service = AuthService(db_session)
+    await auth_service.register(
+        email="lockout@example.com",
+        password="secret123",
+        first_name="Lockout",
+        last_name="User",
+    )
+    await db_session.commit()
+
+    for _ in range(3):
+        with pytest.raises(HTTPException) as exc_info:
+            await auth_service.local_login(
+                email="lockout@example.com",
+                password="wrong",
+            )
+        assert exc_info.value.status_code == 401
+
+    with pytest.raises(HTTPException) as exc_info:
+        await auth_service.local_login(
+            email="lockout@example.com",
+            password="wrong",
+        )
+    assert exc_info.value.status_code == 429
+    assert "Too many failed" in str(exc_info.value.detail)
+
+
+@pytest.mark.asyncio
 async def test_logout_local_invalidates_token(db_session):
     """Local logout invalidates refresh token."""
     auth_service = AuthService(db_session)

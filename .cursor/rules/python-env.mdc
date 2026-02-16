@@ -1,0 +1,28 @@
+---
+description: Use Python virtual environment when running commands in Atlas (development only)
+globs: **/*.py
+alwaysApply: false
+---
+
+# Python Virtual Environment (Development)
+
+When executing Python-related commands in the Atlas project during local development (pytest, uvicorn, ruff, black, pip, etc.), **always** use the project's virtual environment. In production the app runs inside Docker.
+
+## Commands
+
+Use one of these patterns:
+
+```bash
+# Activate venv, then run
+source .venv/bin/activate && <command>
+
+# Or invoke directly via venv binary
+.venv/bin/python -m pytest tests/ -v
+.venv/bin/uvicorn app.main:app --reload
+```
+
+## Examples
+
+- `pytest` → `source .venv/bin/activate && pytest tests/ -v` or `.venv/bin/python -m pytest tests/ -v`
+- `uvicorn` → `source .venv/bin/activate && uvicorn app.main:app --reload` or `.venv/bin/uvicorn app.main:app --reload`
+- `ruff` / `black` → `source .venv/bin/activate && ruff check .` or `.venv/bin/ruff check .`

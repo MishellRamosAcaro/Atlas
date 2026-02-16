@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
+from app.repositories.login_lockout_repository import LoginLockoutRepository
 from app.repositories.oauth_identity_repository import OAuthIdentityRepository
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.user_repository import UserRepository
@@ -32,6 +33,7 @@ class AuthService:
         self._user_repo = UserRepository(session)
         self._oauth_repo = OAuthIdentityRepository(session)
         self._refresh_repo = RefreshTokenRepository(session)
+        self._lockout_repo = LoginLockoutRepository(session)
         self._jwt_service = JWTService()
 
     def _hash_refresh_token(self, token: str) -> str:
@@ -171,17 +173,29 @@ class AuthService:
         client_ip: str | None = None,
     ) -> tuple[User, str]:
         """Process local (email/password) login. Returns (user, refresh_token)."""
+        lockout = await self._lockout_repo.get_by_email(email)
+        is_locked, minutes_left = self._lockout_repo.is_locked(lockout)
+        if is_locked and minutes_left is not None:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Too many failed login attempts. Try again in {minutes_left} minutes.",
+            )
+
         user = await self._user_repo.get_by_email(email)
         if not user or not user.password_hash:
+            await self._lockout_repo.record_failed_attempt(email)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password",
             )
         if not pwd_context.verify(password, user.password_hash):
+            await self._lockout_repo.record_failed_attempt(email)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password",
             )
+
+        await self._lockout_repo.clear(email)
         if not user.can_login:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

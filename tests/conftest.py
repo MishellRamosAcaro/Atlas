@@ -9,7 +9,12 @@ os.environ["ENV"] = "dev"
 os.environ["JWT_SECRET_KEY"] = "test-secret"
 
 from app.infrastructure.base import Base
-from app.models import OAuthIdentity, RefreshToken, User  # noqa: F401 - register models
+from app.models import (  # noqa: F401 - register models
+    LoginLockout,
+    OAuthIdentity,
+    RefreshToken,
+    User,
+)
 
 DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",

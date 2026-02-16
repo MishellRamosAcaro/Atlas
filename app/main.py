@@ -10,7 +10,12 @@ from slowapi.errors import RateLimitExceeded
 from app.config import get_settings
 from app.infrastructure.database import engine
 from app.infrastructure.base import Base
-from app.models import User, OAuthIdentity, RefreshToken  # noqa: F401 - register models
+from app.models import (  # noqa: F401 - register models
+    LoginLockout,
+    OAuthIdentity,
+    RefreshToken,
+    User,
+)
 from app.routers import auth
 
 settings = get_settings()
