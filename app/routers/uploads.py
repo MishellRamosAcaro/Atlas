@@ -63,6 +63,7 @@ async def list_uploads(
             size=f.size_bytes,
             uploaded_at=f.created_at,
             status=f.status,
+            scan_result=f.scan_result,
         )
         for f in files
     ]
