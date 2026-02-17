@@ -61,6 +61,11 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    files: Mapped[list["File"]] = relationship(
+        "File",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         """String representation."""
@@ -78,5 +83,6 @@ class User(Base):
 
 
 if TYPE_CHECKING:
+    from app.models.file import File
     from app.models.oauth_identity import OAuthIdentity
     from app.models.refresh_token import RefreshToken

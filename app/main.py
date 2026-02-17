@@ -11,12 +11,13 @@ from app.config import get_settings
 from app.infrastructure.database import engine
 from app.infrastructure.base import Base
 from app.models import (  # noqa: F401 - register models
+    File,
     LoginLockout,
     OAuthIdentity,
     RefreshToken,
     User,
 )
-from app.routers import auth
+from app.routers import auth, uploads
 
 settings = get_settings()
 
@@ -62,3 +63,4 @@ from app.middleware.security_headers import SecurityHeadersMiddleware
 app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+app.include_router(uploads.router, prefix="/uploads", tags=["Uploads"])

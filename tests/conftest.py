@@ -16,6 +16,7 @@ os.environ["JWT_SECRET_KEY"] = "test-secret"
 
 from app.infrastructure.base import Base
 from app.models import (  # noqa: F401 - register models for metadata
+    File,
     LoginLockout,
     OAuthIdentity,
     RefreshToken,
@@ -29,6 +30,7 @@ if not DATABASE_URL_TEST:
         "Set the environment variable or add it to your .env file. "
         "Example: postgresql+asyncpg://postgres:postgres@localhost:5432/atlas_test"
     )
+os.environ["DATABASE_URL"] = DATABASE_URL_TEST
 
 
 @pytest.fixture

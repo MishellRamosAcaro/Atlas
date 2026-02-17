@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     # CORS - comma-separated origins for prod (e.g. https://app.example.com)
     cors_origins: list[str] = ["*"]
 
+    # Uploads (dev: local dir; prod: GCS bucket)
+    uploads_storage_path: str = "./data"
+    uploads_gcs_bucket: str | None = None  # Set in prod for Google Cloud Storage
+    # Antivirus: in prod a scanner must run; dev can use mock
+    uploads_antivirus_enabled: bool = False  # True in prod
+
     # Cookie
     cookie_domain: str | None = None
     cookie_secure: bool = True

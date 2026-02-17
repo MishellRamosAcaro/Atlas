@@ -156,7 +156,7 @@ Future auditability and tracing may be introduced after MVP.
 
 - Endpoints should follow:
   - **Plural resource naming**
-  - **Versioned base path** (`/v1`)
+
 - **OpenAPI requirements:**
   - Mandatory tags
   - Minimum descriptions

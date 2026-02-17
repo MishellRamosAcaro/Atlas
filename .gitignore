@@ -13,3 +13,5 @@ docker-compose.yml
 .idea
 __pycache__
 ddbb/
+data/
+PENDIENTES.md
