@@ -13,10 +13,10 @@ def client():
 
 
 def test_google_start_returns_url_and_state(client: TestClient):
-    """GET /v1/auth/google/start returns authorization_url, state, code_verifier."""
+    """GET /auth/google/start returns authorization_url, state, code_verifier."""
     # Note: This may fail if lifespan tries to create tables and DB is unavailable
     try:
-        response = client.get("/v1/auth/google/start")
+        response = client.get("/auth/google/start")
         if response.status_code == 500:
             pytest.skip("Database not available (lifespan failed)")
         assert response.status_code == 200

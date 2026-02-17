@@ -23,6 +23,7 @@ pydantic-settings>=2.6.0
 slowapi>=0.1.9
 
 # Utilities
+python-dotenv>=1.0.0
 python-multipart>=0.0.17
 
 # Development
