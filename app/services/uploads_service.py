@@ -87,7 +87,7 @@ class UploadsService:
         if count >= MAX_FILES_PER_USER:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Has alcanzado el límite de 5 archivos.",
+                detail="You have reached the limit of 5 files.",
             )
 
         file_id = uuid.uuid4()
