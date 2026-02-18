@@ -54,6 +54,8 @@ class File(Base):
     )
     scan_result: Mapped[str | None] = mapped_column(Text, nullable=True)
     scan_provider: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # Relative path in storage to extracted document JSON (e.g. staging/{user_id}/extractions/{file_id}.json)
+    extracted_doc_path: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="files")
 

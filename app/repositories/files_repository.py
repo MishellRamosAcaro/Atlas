@@ -108,3 +108,18 @@ class FilesRepository:
         await self._session.delete(file_record)
         await self._session.flush()
         return True
+
+    async def update_extracted_doc_path(
+        self,
+        file_id: uuid.UUID,
+        user_id: uuid.UUID,
+        relative_path: str,
+    ) -> bool:
+        """Update extracted_doc_path for the file if owned by user. Returns True if updated."""
+        file_record = await self.get_file_by_id(file_id, user_id=user_id)
+        if not file_record:
+            return False
+        file_record.extracted_doc_path = relative_path
+        self._session.add(file_record)
+        await self._session.flush()
+        return True

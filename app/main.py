@@ -17,7 +17,7 @@ from app.models import (  # noqa: F401 - register models
     RefreshToken,
     User,
 )
-from app.routers import auth, uploads
+from app.routers import auth, extractions, uploads
 
 settings = get_settings()
 
@@ -64,3 +64,4 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(uploads.router, prefix="/uploads", tags=["Uploads"])
+app.include_router(extractions.router, prefix="/extractions", tags=["Extractions"])

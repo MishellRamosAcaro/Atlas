@@ -22,6 +22,10 @@ pydantic-settings>=2.6.0
 # Rate limiting
 slowapi>=0.1.9
 
+# PDF extraction pipeline
+pdfplumber>=0.11.0
+pypdf>=3.0.1  # successor of PyPDF2 (PyPDF2 deprecated)
+
 # Utilities
 python-dotenv>=1.0.0
 python-multipart>=0.0.17
