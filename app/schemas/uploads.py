@@ -17,7 +17,7 @@ class UploadListItem(BaseModel):
     """Single item in GET /uploads list."""
 
     file_id: UUID
-    name: str = Field(..., description="Original filename")
+    filename: str = Field(..., description="Original filename")
     size: int = Field(..., description="Size in bytes")
     uploaded_at: datetime
     status: str = Field(..., description="CLEAN or PENDING_SCAN")
@@ -34,7 +34,7 @@ class UploadMetadataResponse(BaseModel):
     """Response for GET /uploads/{file_id} (metadata only)."""
 
     file_id: UUID
-    name: str
+    filename: str
     size: int
     content_type: str
     status: str

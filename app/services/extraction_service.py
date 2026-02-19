@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import HTTPException, status
 
 from app.extraction.pipeline import extract_document
-from app.infrastructure.storage import get_storage
+from app.infrastructure.storage import StorageError, get_storage
 from app.models.file import FILE_STATUS_CLEAN
 from app.repositories.files_repository import FilesRepository
 
@@ -114,3 +114,52 @@ class ExtractionService:
         await self._repo.update_extracted_doc_path(file_id, user_id, relative_path)
 
         return payload
+
+    async def get_extracted_document(
+        self, file_id: uuid.UUID, user_id: uuid.UUID
+    ) -> dict:
+        """
+        Read the extracted JSON from storage and return the document section.
+
+        Returns the "document" key from staging/{user_id}/extractions/{file_id}.json.
+        Raises HTTPException 404 if file not found, not owned, or no extraction;
+        404/500 if storage read or JSON parse fails.
+        """
+        file_record = await self._repo.get_file_by_id(file_id, user_id=user_id)
+        if not file_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="File not found.",
+            )
+        if not file_record.extracted_doc_path:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No extraction available for this file.",
+            )
+        try:
+            stream = self._storage.open(file_record.extracted_doc_path)
+            content = stream.read()
+            stream.close()
+        except StorageError:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Extraction file not found.",
+            ) from None
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Could not read extraction.",
+            ) from None
+        try:
+            data = json.loads(content.decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Invalid extraction data.",
+            ) from None
+        if not isinstance(data, dict) or "document" not in data:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Invalid extraction format.",
+            ) from None
+        return data["document"]

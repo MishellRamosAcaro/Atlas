@@ -1,5 +1,6 @@
 """Tests for extractions API."""
 
+import io
 import tempfile
 import uuid
 
@@ -88,8 +89,8 @@ def auth_override(test_user_id):
 def extraction_storage_tmp(monkeypatch):
     """Use a temp dir for storage in extraction tests.
 
-    Patch both the infrastructure module and the extraction_service module
-    so that all callers (test and service) use the same temp dir.
+    Patch infrastructure, extraction_service, and uploads_service so that
+    upload_and_extract flow (uploads then extractions) uses the same tmp dir.
     """
     from app.infrastructure.storage import FileSystemStorage
 
@@ -103,6 +104,10 @@ def extraction_storage_tmp(monkeypatch):
         )
         monkeypatch.setattr(
             "app.services.extraction_service.get_storage",
+            lambda: _make_storage(),
+        )
+        monkeypatch.setattr(
+            "app.services.uploads_service.get_storage",
             lambda: _make_storage(),
         )
         yield tmp
@@ -257,3 +262,173 @@ async def test_post_extractions_200_returns_document_and_sections(
     # Public response must not expose extraction_confidence
     for sec in data["sections"]:
         assert "extraction_confidence" not in sec
+
+
+# --- POST /upload-and-extract (upload then extract in one call) ---
+
+
+@pytest.mark.asyncio
+async def test_post_upload_and_extract_200_returns_document_fields_only(
+    async_client, test_user_id, auth_override, override_get_db
+):
+    """POST /upload-and-extract returns 200 with document fields only (no sections)."""
+    auth_override
+    response = await async_client.post(
+        "/upload-and-extract",
+        files={
+            "file": (
+                "sample.pdf",
+                io.BytesIO(MINIMAL_PDF_BYTES),
+                "application/pdf",
+            )
+        },
+    )
+    assert (
+        response.status_code == 200
+    ), f"Expected 200, got {response.status_code}: {response.text}"
+    data = response.json()
+    assert "document" in data
+    doc = data["document"]
+    assert "file_id" in doc
+    assert "source" in doc
+    assert "document_type" in doc
+    assert "technical_context" in doc
+    assert "risk_level" in doc
+    assert "audience" in doc
+    assert "state" in doc
+    assert "effective_date" in doc
+    assert "owner_team" in doc
+    assert "sections" not in data
+
+
+@pytest.mark.asyncio
+async def test_post_upload_and_extract_400_when_not_pdf(
+    async_client, test_user_id, auth_override, override_get_db
+):
+    """POST /upload-and-extract returns 400 when file is not PDF."""
+    auth_override
+    response = await async_client.post(
+        "/upload-and-extract",
+        files={
+            "file": (
+                "doc.txt",
+                io.BytesIO(b"hello world"),
+                "text/plain",
+            )
+        },
+    )
+    assert response.status_code == 400
+    assert "Only PDF" in (response.json().get("detail") or "")
+
+
+# --- GET /extractions/{file_id}/document ---
+
+
+@pytest.mark.asyncio
+async def test_get_document_404_when_file_not_found(
+    async_client, auth_override, override_get_db
+):
+    """GET /extractions/{file_id}/document returns 404 when file does not exist."""
+    auth_override
+    response = await async_client.get(
+        f"/extractions/{uuid.uuid4()}/document",
+    )
+    assert response.status_code == 404
+    assert "detail" in response.json()
+
+
+@pytest.mark.asyncio
+async def test_get_document_404_when_no_extraction(
+    async_client, test_user_id, auth_override, override_get_db, db_engine
+):
+    """GET /extractions/{file_id}/document returns 404 when file has no extraction."""
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+    from app.repositories.files_repository import FilesRepository
+
+    maker = async_sessionmaker(
+        db_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autoflush=False,
+    )
+    file_id = uuid.uuid4()
+    async with maker() as session:
+        repo = FilesRepository(session)
+        await repo.create_file(
+            file_id=file_id,
+            user_id=test_user_id,
+            filename="sample.pdf",
+            stored_path=f"staging/{test_user_id}/{file_id}.pdf",
+            size_bytes=100,
+            content_type="application/pdf",
+            status=FILE_STATUS_CLEAN,
+        )
+        await session.commit()
+
+    auth_override
+    response = await async_client.get(f"/extractions/{file_id}/document")
+    assert response.status_code == 404
+    assert "detail" in response.json()
+
+
+@pytest.mark.asyncio
+async def test_get_document_200_returns_document(
+    async_client, test_user_id, auth_override, override_get_db, db_engine
+):
+    """GET /extractions/{file_id}/document returns 200 with document when extraction exists."""
+    import json as json_module
+
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+    from app.repositories.files_repository import FilesRepository
+
+    maker = async_sessionmaker(
+        db_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autoflush=False,
+    )
+    file_id = uuid.uuid4()
+    relative_path = f"staging/{test_user_id}/extractions/{file_id}.json"
+    async with maker() as session:
+        repo = FilesRepository(session)
+        await repo.create_file(
+            file_id=file_id,
+            user_id=test_user_id,
+            filename="sample.pdf",
+            stored_path=f"staging/{test_user_id}/{file_id}.pdf",
+            size_bytes=100,
+            content_type="application/pdf",
+            status=FILE_STATUS_CLEAN,
+        )
+        await repo.update_extracted_doc_path(file_id, test_user_id, relative_path)
+        await session.commit()
+
+    import app.infrastructure.storage as storage_module
+
+    storage = storage_module.get_storage()
+    doc = {"file_id": str(file_id), "source": "sample.pdf", "title": "Test"}
+    payload = {"document": doc, "sections": []}
+    storage.save(
+        json_module.dumps(payload).encode("utf-8"),
+        relative_path,
+    )
+
+    auth_override
+    response = await async_client.get(f"/extractions/{file_id}/document")
+    assert (
+        response.status_code == 200
+    ), f"Expected 200, got {response.status_code}: {response.text}"
+    data = response.json()
+    assert "document" in data
+    doc = data["document"]
+    assert doc.get("file_id") == str(file_id)
+    assert doc.get("source") == "sample.pdf"
+    assert "document_type" in doc
+    assert "technical_context" in doc
+    assert "risk_level" in doc
+    assert "audience" in doc
+    assert "state" in doc
+    assert "effective_date" in doc
+    assert "owner_team" in doc

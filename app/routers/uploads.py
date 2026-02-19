@@ -59,7 +59,7 @@ async def list_uploads(
     items = [
         UploadListItem(
             file_id=f.file_id,
-            name=f.filename,
+            filename=f.filename,
             size=f.size_bytes,
             uploaded_at=f.created_at,
             status=f.status,
@@ -92,7 +92,7 @@ async def get_upload_metadata(
         )
     return UploadMetadataResponse(
         file_id=file_record.file_id,
-        name=file_record.filename,
+        filename=file_record.filename,
         size=file_record.size_bytes,
         content_type=file_record.content_type,
         status=file_record.status,
