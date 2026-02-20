@@ -11,12 +11,47 @@ from app.middleware.auth import get_current_user_id
 from app.repositories.files_repository import FilesRepository
 from app.schemas.extractions import (
     ExtractedDocumentFields,
-    ExtractionResponse,
+    ExtractedDocumentPatchBody,
     ExtractedDocumentResponse,
+    ExtractionResponse,
 )
 from app.services.extraction_service import ExtractionService
 
 router = APIRouter()
+
+
+@router.patch(
+    "/{file_id}/document",
+    response_model=ExtractedDocumentResponse,
+    summary="Update extracted document fields",
+    description="Partially update the document section of the extraction JSON. Nested source and technical_context are merged. If source.file_name is updated, files.filename in DB is updated too.",
+)
+async def patch_extracted_document(
+    file_id: uuid.UUID,
+    body: ExtractedDocumentPatchBody,
+    user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Update document fields in storage and optionally files.filename."""
+    files_repo = FilesRepository(db)
+    service = ExtractionService(files_repo)
+    updates = body.model_dump(exclude_none=True)
+    if not updates:
+        document = await service.get_extracted_document(file_id, user_id)
+    else:
+        document = await service.update_document_fields(file_id, user_id, updates)
+    fields = ExtractedDocumentFields(
+        file_id=str(document["file_id"]) if document.get("file_id") is not None else None,
+        source=document.get("source"),
+        document_type=document.get("document_type"),
+        technical_context=document.get("technical_context"),
+        risk_level=document.get("risk_level"),
+        audience=document.get("audience") or [],
+        state=document.get("state"),
+        effective_date=document.get("effective_date"),
+        owner_team=document.get("owner_team"),
+    )
+    return ExtractedDocumentResponse(document=fields)
 
 
 @router.get(

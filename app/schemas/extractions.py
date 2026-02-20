@@ -45,3 +45,22 @@ class ExtractedDocumentResponse(BaseModel):
         ...,
         description="Document fields (file_id, source, document_type, technical_context, risk_level, audience, state, effective_date, owner_team).",
     )
+
+
+class ExtractedDocumentPatchBody(BaseModel):
+    """Body for PATCH /extractions/{file_id}/document. All fields optional; nested objects are merged."""
+
+    source: dict | None = Field(
+        None,
+        description="Partial source (e.g. { \"file_name\": \"new.pdf\" }). Merged with existing source.",
+    )
+    document_type: str | None = Field(None, description="Type of document.")
+    technical_context: dict | None = Field(
+        None,
+        description="Partial technical context (equipment, version, workflow). Merged with existing.",
+    )
+    risk_level: str | None = Field(None, description="Risk level.")
+    audience: list[str] | None = Field(None, description="Target audience.")
+    state: str | None = Field(None, description="Document state.")
+    effective_date: str | None = Field(None, description="Effective date.")
+    owner_team: str | None = Field(None, description="Owner team.")

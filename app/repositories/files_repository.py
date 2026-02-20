@@ -123,3 +123,18 @@ class FilesRepository:
         self._session.add(file_record)
         await self._session.flush()
         return True
+
+    async def update_filename(
+        self,
+        file_id: uuid.UUID,
+        user_id: uuid.UUID,
+        filename: str,
+    ) -> bool:
+        """Update filename for the file if owned by user. Returns True if updated."""
+        file_record = await self.get_file_by_id(file_id, user_id=user_id)
+        if not file_record:
+            return False
+        file_record.filename = filename
+        self._session.add(file_record)
+        await self._session.flush()
+        return True

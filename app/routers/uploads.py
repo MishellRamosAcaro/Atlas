@@ -15,6 +15,7 @@ from app.schemas.uploads import (
     UploadListItem,
     UploadListResponse,
     UploadMetadataResponse,
+    UploadPatchBody,
     UploadSuccessResponse,
 )
 from app.services.uploads_service import UploadsService
@@ -68,6 +69,37 @@ async def list_uploads(
         for f in files
     ]
     return UploadListResponse(items=items)
+
+
+@router.patch(
+    "/{file_id}",
+    response_model=UploadMetadataResponse,
+    summary="Update file metadata",
+    description="Update filename for an uploaded file. Only owner.",
+)
+async def patch_upload(
+    file_id: uuid.UUID,
+    body: UploadPatchBody,
+    user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Update file filename if owned by user."""
+    files_repo = FilesRepository(db)
+    updated = await files_repo.update_filename(file_id, user_id, body.filename)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found.",
+        )
+    file_record = await files_repo.get_file_by_id(file_id, user_id=user_id)
+    return UploadMetadataResponse(
+        file_id=file_record.file_id,
+        filename=file_record.filename,
+        size=file_record.size_bytes,
+        content_type=file_record.content_type,
+        status=file_record.status,
+        uploaded_at=file_record.created_at,
+    )
 
 
 @router.get(

@@ -163,3 +163,93 @@ class ExtractionService:
                 detail="Invalid extraction format.",
             ) from None
         return data["document"]
+
+    def _merge_document_updates(self, document: dict, updates: dict) -> None:
+        """Merge updates into document in place. Nested source and technical_context are merged."""
+        for key, value in updates.items():
+            if value is None:
+                continue
+            if key == "source" and isinstance(value, dict):
+                existing = document.get("source")
+                if isinstance(existing, dict):
+                    document["source"] = {**existing, **value}
+                else:
+                    document["source"] = value
+            elif key == "technical_context" and isinstance(value, dict):
+                existing = document.get("technical_context")
+                if isinstance(existing, dict):
+                    document["technical_context"] = {**existing, **value}
+                else:
+                    document["technical_context"] = value
+            else:
+                document[key] = value
+
+    async def update_document_fields(
+        self,
+        file_id: uuid.UUID,
+        user_id: uuid.UUID,
+        updates: dict,
+    ) -> dict:
+        """
+        Update selected fields in the extracted document JSON and persist.
+        If updates contain source.file_name, also update files.filename in DB.
+        Returns the updated document.
+        """
+        file_record = await self._repo.get_file_by_id(file_id, user_id=user_id)
+        if not file_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="File not found.",
+            )
+        if not file_record.extracted_doc_path:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No extraction available for this file.",
+            )
+        try:
+            stream = self._storage.open(file_record.extracted_doc_path)
+            content = stream.read()
+            stream.close()
+        except StorageError:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Extraction file not found.",
+            ) from None
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Could not read extraction.",
+            ) from None
+        try:
+            data = json.loads(content.decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Invalid extraction data.",
+            ) from None
+        if not isinstance(data, dict) or "document" not in data:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Invalid extraction format.",
+            ) from None
+
+        document = data["document"]
+        if not isinstance(document, dict):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Invalid extraction format.",
+            ) from None
+
+        self._merge_document_updates(document, updates)
+
+        new_file_name = None
+        source = document.get("source")
+        if isinstance(source, dict) and "file_name" in source:
+            new_file_name = source.get("file_name")
+            if isinstance(new_file_name, str) and new_file_name.strip():
+                await self._repo.update_filename(file_id, user_id, new_file_name.strip())
+
+        json_bytes = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
+        self._storage.save(json_bytes, file_record.extracted_doc_path)
+
+        return document

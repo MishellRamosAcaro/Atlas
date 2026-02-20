@@ -39,3 +39,9 @@ class UploadMetadataResponse(BaseModel):
     content_type: str
     status: str
     uploaded_at: datetime
+
+
+class UploadPatchBody(BaseModel):
+    """Body for PATCH /uploads/{file_id} (rename file)."""
+
+    filename: str = Field(..., min_length=1, description="New filename")
