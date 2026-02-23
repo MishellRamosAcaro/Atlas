@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
+from app.repositories.files_repository import FilesRepository
 from app.repositories.login_lockout_repository import LoginLockoutRepository
 from app.repositories.oauth_identity_repository import OAuthIdentityRepository
 from app.repositories.refresh_token_repository import RefreshTokenRepository
@@ -34,6 +35,7 @@ class AuthService:
         self._oauth_repo = OAuthIdentityRepository(session)
         self._refresh_repo = RefreshTokenRepository(session)
         self._lockout_repo = LoginLockoutRepository(session)
+        self._files_repo = FilesRepository(session)
         self._jwt_service = JWTService()
 
     def _hash_refresh_token(self, token: str) -> str:
@@ -289,3 +291,110 @@ class AuthService:
             token_hash = self._hash_refresh_token(refresh_token_raw)
             await self._refresh_repo.delete_by_token_hash(token_hash)
         return None
+
+    def _normalize_email(self, email: str) -> str:
+        """Normalize email for storage."""
+        return email.strip().lower()
+
+    async def update_profile(
+        self,
+        user_id: uuid.UUID,
+        *,
+        email: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        is_active: bool | None = None,
+    ) -> User:
+        """Update user profile. Validates email uniqueness if changed."""
+        user = await self._user_repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        if email is not None:
+            normalized = self._normalize_email(email)
+            if normalized != user.email:
+                existing = await self._user_repo.get_by_email_excluding(
+                    normalized, user_id
+                )
+                if existing:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Email already registered",
+                    )
+                user.email = normalized
+        if first_name is not None:
+            user.first_name = first_name.strip()
+        if last_name is not None:
+            user.last_name = last_name.strip()
+        if is_active is not None:
+            user.is_active = is_active
+        await self._user_repo.update(user)
+        return user
+
+    async def change_password(
+        self,
+        user_id: uuid.UUID,
+        current_password: str,
+        new_password: str,
+    ) -> User:
+        """Verify current password, set new hash, invalidate all sessions."""
+        user = await self._user_repo.get_by_id(user_id)
+        if not user or not user.password_hash:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Current password is incorrect",
+            )
+        if not pwd_context.verify(current_password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Current password is incorrect",
+            )
+        user.password_hash = pwd_context.hash(new_password)
+        await self._user_repo.update(user)
+        await self._refresh_repo.delete_all_by_user(user_id)
+        return user
+
+    async def deactivate_account(self, user_id: uuid.UUID) -> None:
+        """Set user inactive and invalidate all sessions."""
+        user = await self._user_repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        user.is_active = False
+        await self._user_repo.update(user)
+        await self._refresh_repo.delete_all_by_user(user_id)
+
+    async def delete_account(self, user_id: uuid.UUID, password: str) -> None:
+        """Verify password, delete all user files from storage, then delete user."""
+        user = await self._user_repo.get_by_id(user_id)
+        if not user or not user.password_hash:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Password is incorrect",
+            )
+        if not pwd_context.verify(password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Password is incorrect",
+            )
+        from app.infrastructure.storage import get_storage
+
+        storage = get_storage()
+        files = await self._files_repo.list_all_files_by_user(user_id)
+        for file_record in files:
+            try:
+                storage.delete(file_record.stored_path)
+            except Exception:
+                pass
+            if file_record.extracted_doc_path:
+                try:
+                    storage.delete(file_record.extracted_doc_path)
+                except Exception:
+                    pass
+        await self._refresh_repo.delete_all_by_user(user_id)
+        await self._lockout_repo.clear(user.email)
+        await self._user_repo.delete_user(user_id)

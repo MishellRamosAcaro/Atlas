@@ -17,9 +17,12 @@ from app.middleware.auth import get_current_user_id, get_refresh_token_from_cook
 from app.middleware.cookies import clear_auth_cookies, set_auth_cookies
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import (
+    DeleteAccountRequest,
     GoogleCallbackRequest,
     GoogleStartResponse,
     MeResponse,
+    PatchMeRequest,
+    PatchPasswordRequest,
     RegisterRequest,
     TokenRequest,
 )
@@ -211,5 +214,96 @@ async def me(
         id=user.id,
         email=user.email,
         name=user.name,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        is_active=user.is_active,
         roles=user.roles,
     )
+
+
+@router.patch(
+    "/me",
+    response_model=MeResponse,
+    summary="Update current user profile",
+    description="Update email, name, or is_active. Email must be unique.",
+)
+async def patch_me(
+    body: PatchMeRequest,
+    user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> MeResponse:
+    """Update current user profile (email, first_name, last_name, is_active)."""
+    auth_service = AuthService(db)
+    user = await auth_service.update_profile(
+        user_id,
+        email=body.email.strip().lower() if body.email else None,
+        first_name=body.first_name.strip() if body.first_name else None,
+        last_name=body.last_name.strip() if body.last_name else None,
+        is_active=body.is_active,
+    )
+    return MeResponse(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        is_active=user.is_active,
+        roles=user.roles,
+    )
+
+
+@router.patch(
+    "/me/password",
+    summary="Change password",
+    description="Set new password and invalidate all sessions.",
+)
+async def patch_me_password(
+    body: PatchPasswordRequest,
+    response: Response,
+    user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Change password; invalidate all sessions and clear cookies."""
+    auth_service = AuthService(db)
+    await auth_service.change_password(
+        user_id,
+        current_password=body.current_password,
+        new_password=body.new_password,
+    )
+    clear_auth_cookies(response)
+    return {"message": "Password updated. Please log in again."}
+
+
+@router.post(
+    "/me/deactivate",
+    summary="Deactivate account",
+    description="Set account inactive and log out all sessions.",
+)
+async def post_me_deactivate(
+    response: Response,
+    user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Deactivate account and clear cookies."""
+    auth_service = AuthService(db)
+    await auth_service.deactivate_account(user_id)
+    clear_auth_cookies(response)
+    return {"message": "Account deactivated. You have been logged out."}
+
+
+@router.delete(
+    "/me",
+    summary="Delete account",
+    description="Delete account and all associated data. Requires password confirmation.",
+)
+async def delete_me(
+    body: DeleteAccountRequest,
+    response: Response,
+    user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Delete account, all files, and clear cookies."""
+    auth_service = AuthService(db)
+    await auth_service.delete_account(user_id, body.password)
+    clear_auth_cookies(response)
+    return {"message": "Account and all associated data have been deleted."}

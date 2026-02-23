@@ -70,6 +70,13 @@ class FilesRepository:
         )
         return list(result.scalars().all())
 
+    async def list_all_files_by_user(self, user_id: uuid.UUID) -> list[File]:
+        """List all file records for user (any status). Used for account deletion."""
+        result = await self._session.execute(
+            select(File).where(File.user_id == user_id).order_by(File.created_at.desc())
+        )
+        return list(result.scalars().all())
+
     async def get_file_by_id(
         self,
         file_id: uuid.UUID,

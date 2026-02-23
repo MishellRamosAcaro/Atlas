@@ -25,6 +25,13 @@ class UserRepository:
         result = await self._session.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
 
+    async def get_by_email_excluding(self, email: str, exclude_user_id: uuid.UUID) -> User | None:
+        """Get user by email if they exist and are not the excluded user."""
+        result = await self._session.execute(
+            select(User).where(User.email == email).where(User.id != exclude_user_id)
+        )
+        return result.scalar_one_or_none()
+
     async def create(
         self,
         email: str,
@@ -50,3 +57,12 @@ class UserRepository:
         self._session.add(user)
         await self._session.flush()
         return user
+
+    async def delete_user(self, user_id: uuid.UUID) -> bool:
+        """Delete user by ID. Returns True if deleted. CASCADE removes related rows."""
+        user = await self.get_by_id(user_id)
+        if not user:
+            return False
+        await self._session.delete(user)
+        await self._session.flush()
+        return True
