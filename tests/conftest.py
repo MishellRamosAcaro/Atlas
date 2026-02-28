@@ -13,6 +13,7 @@ load_dotenv(_env_path)
 
 os.environ["ENV"] = "dev"
 os.environ["JWT_SECRET_KEY"] = "test-secret"
+os.environ.setdefault("LLM_PRESET", "gemini-flash")
 
 from app.infrastructure.base import Base
 from app.models import (  # noqa: F401 - register models for metadata

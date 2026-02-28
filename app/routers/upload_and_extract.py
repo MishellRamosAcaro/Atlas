@@ -11,11 +11,12 @@ from app.limiter import limiter
 from app.middleware.auth import get_current_user_id
 from app.repositories.files_repository import FilesRepository
 from app.schemas.extractions import ExtractedDocumentFields, ExtractedDocumentResponse
-from app.services.extraction_service import ExtractionService
-from app.services.uploads_service import UploadsService
+from app.schemas.enrichments import EnrichmentResponse
+from app.services.extraction_service import ExtractionService   
+from app.services.uploads_service import UploadsService 
+from app.services.enrichment_service import EnrichmentService
 
 router = APIRouter()
-
 
 def _document_to_fields(document: dict) -> ExtractedDocumentFields:
     """Build ExtractedDocumentFields from raw document dict (no sections)."""
@@ -35,11 +36,11 @@ def _document_to_fields(document: dict) -> ExtractedDocumentFields:
 @router.post(
     "",
     response_model=ExtractedDocumentResponse,
-    summary="Upload and extract",
-    description="Upload a PDF file (multipart) and run extraction in one call. Returns only document fields (file_id, source, document_type, technical_context, risk_level, audience, state, effective_date, owner_team). Sections are not returned.",
+    summary="Upload, extract and enrich a file",
+    description="Upload a PDF file (multipart) and run extraction and enrichment in one call. Returns only document fields (file_id, source, document_type, technical_context, risk_level, audience, state, effective_date, owner_team). Sections are not returned.",
 )
 @limiter.limit("10/minute")
-async def upload_and_extract(
+async def upload_extract_and_enrich(
     request: Request,
     file: UploadFile = File(...),
     user_id: Annotated[uuid.UUID, Depends(get_current_user_id)] = None,
@@ -53,5 +54,9 @@ async def upload_and_extract(
     file_id, _ = await uploads_service.upload_file(user_id, file)
     payload = await extraction_service.extract_from_file(file_id, user_id)
     document = payload["document"]
-    fields = _document_to_fields(document)
-    return ExtractedDocumentResponse(document=fields)
+
+
+    enrichment_service = EnrichmentService(files_repo)
+    enrichment_payload = await enrichment_service.enrich_file(file_id, user_id)
+    return EnrichmentResponse(document=enrichment_payload)
+

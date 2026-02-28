@@ -1,11 +1,15 @@
 """Atlas FastAPI application entry point."""
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from app.config import get_settings
 from app.infrastructure.database import engine
@@ -17,7 +21,7 @@ from app.models import (  # noqa: F401 - register models
     RefreshToken,
     User,
 )
-from app.routers import auth, extractions, upload_and_extract, uploads
+from app.routers import auth, enrichments, extractions, upload_and_extract, uploads
 
 settings = get_settings()
 
@@ -65,6 +69,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(uploads.router, prefix="/uploads", tags=["Uploads"])
 app.include_router(extractions.router, prefix="/extractions", tags=["Extractions"])
+app.include_router(enrichments.router, prefix="/enrichments", tags=["Enrichments"])
 app.include_router(
     upload_and_extract.router,
     prefix="/upload-and-extract",

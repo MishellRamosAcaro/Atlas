@@ -55,6 +55,15 @@ class Settings(BaseSettings):
     cookie_secure: bool = True
     cookie_same_site: Literal["lax", "strict", "none"] = "none"
 
+    # LLM preset (required in .env as LLM_PRESET; no default)
+    llm_preset: Literal[
+        "claude-haiku",
+        "gemini-flash",
+        "deepseek_reasoner",
+        "deepseek_chat",
+        "openai-chatgpt",
+    ]
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v: str | list[str]) -> list[str]:
