@@ -27,6 +27,43 @@ from app.prompts.enrichment import (
 
 TRUNCATE_CONTENT = 4000
 
+# Headings that identify a Table of Contents / Index section (case-insensitive match)
+_TOC_HEADING_PATTERNS = frozenset({
+    "table of contents",
+    "contents",
+    "index",
+    "índice",
+    "indice",
+    "tabla de contenidos",
+    "tabla de contenido",
+    "content",
+})
+
+
+def _is_toc_section(section: dict[str, Any]) -> bool:
+    """True if the section looks like a Table of Contents / Index by heading."""
+    heading = (section.get("heading") or "").strip().lower()
+    if not heading:
+        return False
+    if heading in _TOC_HEADING_PATTERNS:
+        return True
+    for pattern in _TOC_HEADING_PATTERNS:
+        if heading.startswith(pattern) or heading == pattern:
+            return True
+    return False
+
+
+def _filter_toc_sections(sections: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Remove leading sections that are Table of Contents / Index."""
+    result: list[dict[str, Any]] = []
+    skip_leading_toc = True
+    for s in sections:
+        if skip_leading_toc and _is_toc_section(s):
+            continue
+        skip_leading_toc = False
+        result.append(s)
+    return result
+
 
 def _keywords_to_objects(keywords: list[Any]) -> list[dict[str, Any]]:
     """Convert list of (term, score) or existing dicts to [{"term": str, "score": float}]."""
@@ -303,6 +340,7 @@ class DocumentSectionAnalyzer:
         """
         document = input_json.get("document") or {}
         sections = input_json.get("sections") or []
+        sections = _filter_toc_sections(sections)
         if not sections:
             return input_json
 
