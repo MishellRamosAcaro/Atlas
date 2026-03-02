@@ -1,44 +1,69 @@
 """Prompt templates for section and document enrichment."""
 
+from app.prompts.blacklist import BLACKLIST
 
-def section_enrichment_template(blacklist_preview: str) -> str:
+
+DOCUMENT_TYPE_VALUES = "SOP | ApplicationNote | ValidationDoc | Marketing"
+RISK_LEVEL_VALUES = "Informational | Operational | Regulatory"
+AUDIENCE_VALUES = "Operator | FAS | Scientist"
+STATE_VALUES = "Validated | Deprecated | Draft"
+
+
+def section_enrichment_template() -> str:
     """Build the prompt for enriching a single section (heading, content, section_summary, keywords)."""
-    return f"""You are an assistant that enriches document sections with structured metadata.
+    return f"""You are an FAS expert in document intelligence. Your task is to enrich ONE section from a pipeline-extracted document. The document uses SECTIONS as atomic units (not chunks).
 
-Given a section (type and content), respond with a single JSON object (no markdown, no code fence) with exactly these keys:
-- "heading": string, clear section title (can refine the existing one).
-- "content": string, cleaned or slightly summarized content of the section.
-- "section_summary": string, 1-3 sentence summary of the section.
-- "keywords": array of strings, relevant terms/concepts from the section (max 15). Do not include generic words. Avoid terms that appear in this blacklist: {blacklist_preview}
+STRICT RULES:
+- Do NOT change or output section_id, doc_id. They are immutable.
+- Output ONLY a single JSON object with these keys: "heading", "content", "section_summary", "keywords".
+- heading: If the section's heading is empty or missing, infer a short title from the content. Otherwise keep or slightly normalize the existing heading.
+- content: Restructure and normalize the content (clear paragraphs, bullet points, numbered steps where appropriate, list, spacing) without changing the meaning. Preserve technical details and nuance; improve formatting and clarity. Do not drop information. If section_type is "figure" or "table", keep ONLY the caption description (one short paragraph); do not keep raw table cells or figure data.
+- section_summary: A summary of the section in 1-2 sentences, including the meaning of the section.
+- keywords: List of the most relevant BIOLOGICAL and technical keywords for this section.
+  * Apply MINIMUM FREQUENCY: prefer terms that appear at least 2 times in the section and/or represent essential protocol steps.
+  * Restrict to BIOMEDICAL/TECHNICAL vocabulary. Prioritize biology-related terms (genes, assays, equipment, organisms, named procedures).
+  * Do NOT use these generic terms (blacklist): """ + BLACKLIST.join(", ") + """
+  * Differentiate CENTRAL THEME (main workflow, critical steps) from merely mentioned terms; prefer central terms, exclude generic terms and terms not central to the workflow.
+  * 3-15 keywords per section.
 
-Section type: {{section_type}}
+Output format (valid JSON only, no markdown):
+{{"heading": "...", "content": "...", "section_summary": "...", "keywords": ["kw1", "kw2", ...]}}
 
-Content:
-{{content}}
-
-Respond only with the JSON object."""
-
-
-
+SECTION (section_type and content only; IDs must not be changed):
+section_type: {section_type}
+content:
+{content}
+"""
 
 
-def document_metadata_template(blacklist_preview: str) -> str:
+
+
+
+def document_metadata_template() -> str:
     """Build the prompt for document-level metadata (document_type, risk_level, audience, etc.)."""
-    return f"""You are an assistant that extracts document-level metadata from a technical or regulatory document.
+    return f"""You are an FAS expert in document intelligence. Given the full document context (source, section headings, and section keywords), fill the document-level metadata AND document-level keywords in hierarchical form.
 
-Given the document context below (source, section headings, section keywords), respond with a single JSON object (no markdown, no code fence) with exactly these keys:
-- "document_type": string (e.g. SOP, Protocol, Report, Manual).
-- "risk_level": string (e.g. Informational, Low, Medium, High, Critical).
-- "audience": array of strings (e.g. Operator, QA, Engineer).
-- "state": string (e.g. Draft, Approved, Superseded).
-- "technical_context": object with optional "equipment", "version", "workflow" (array of strings).
-- "effective_date": string or null (ISO date if present).
-- "owner_team": string or null.
-- "supersedes_file_id": string or null.
-- "keywords": array of strings, key terms for the whole document (max 20). Avoid blacklist: {blacklist_preview}
-- "keywords_hierarchy": object with optional keys like "core_workflow_terms", "technologies", "biological_materials", "critical_process_steps", "regulatory_or_qc_terms", each an array of strings.
+ALLOWED VALUES (use exactly these):
+- document_type: one of """ + DOCUMENT_TYPE_VALUES + """
+- risk_level: one of """ + RISK_LEVEL_VALUES + """
+- audience: list of one or more of """ + AUDIENCE_VALUES + """
+- state: one of """ + STATE_VALUES + """
+- technical_context: object with "equipment" (string or null), "version" (string or null), "workflow" (list of strings, e.g. ["NGS", "ELISA"])
+- effective_date: ISO-8601 date string or null
+- owner_team: string or null (e.g. QA, R&D, Applications)
+- supersedes_doc_id: string or null
+- keywords: list of most important terms (biological and technical).
+- keywords_hierarchy: object with exactly these keys, each a list of strings:
+  - core_workflow_terms
+  - technologies
+  - biological_materials
+  - critical_process_steps
+  - regulatory_or_qc_terms
+  Use biomedical vocabulary; avoid blacklist: """ +  BLACKLIST.join(", ") + """
+  Include terms that appear in multiple sections or in title/intended use; exclude generic terms.
 
 Document context:
-{{document_context}}
+{document_context}
 
-Respond only with the JSON object."""
+Respond with a single JSON object with keys: document_type, risk_level, audience, state, technical_context, effective_date, owner_team, supersedes_doc_id, keywords, keywords_hierarchy.
+"""

@@ -37,7 +37,6 @@ class EnrichmentRequestBody(BaseModel):
         description="LLM top_p.",
     )
 
-
 class EnrichmentResponse(BaseModel):
     """Response for POST /enrichments/{file_id}: enriched document and sections."""
 
