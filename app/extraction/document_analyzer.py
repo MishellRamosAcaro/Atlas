@@ -113,7 +113,7 @@ class DocumentSectionAnalyzer:
         self,
         preset: str,
         config: LLMConfig | None = None,
-        max_concurrent: int = 8,
+        max_concurrent: int = 4,
         *,
         blacklist_path: Path | str | None = None,
         anthropic_api_key: str | None = None,

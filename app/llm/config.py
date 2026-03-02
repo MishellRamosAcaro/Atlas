@@ -20,7 +20,7 @@ class LLMConfig:
     max_tokens: int = 8192
     top_p: float = 1.0
     timeout: float = 120.0
-    max_retries: int = 3
+    max_retries: int = 1
 
     @classmethod
     def from_env(cls) -> LLMConfig:

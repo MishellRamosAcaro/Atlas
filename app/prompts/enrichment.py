@@ -19,6 +19,9 @@ Content:
 Respond only with the JSON object."""
 
 
+
+
+
 def document_metadata_template(blacklist_preview: str) -> str:
     """Build the prompt for document-level metadata (document_type, risk_level, audience, etc.)."""
     return f"""You are an assistant that extracts document-level metadata from a technical or regulatory document.

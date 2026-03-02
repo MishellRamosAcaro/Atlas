@@ -10,7 +10,6 @@ from app.infrastructure.database import get_db
 from app.limiter import limiter
 from app.middleware.auth import get_current_user_id
 from app.repositories.files_repository import FilesRepository
-from app.schemas.extractions import ExtractedDocumentFields, ExtractedDocumentResponse
 from app.schemas.enrichments import EnrichmentResponse
 from app.services.extraction_service import ExtractionService   
 from app.services.uploads_service import UploadsService 
@@ -18,26 +17,12 @@ from app.services.enrichment_service import EnrichmentService
 
 router = APIRouter()
 
-def _document_to_fields(document: dict) -> ExtractedDocumentFields:
-    """Build ExtractedDocumentFields from raw document dict (no sections)."""
-    return ExtractedDocumentFields(
-        file_id=str(document["file_id"]) if document.get("file_id") is not None else None,
-        source=document.get("source"),
-        document_type=document.get("document_type"),
-        technical_context=document.get("technical_context"),
-        risk_level=document.get("risk_level"),
-        audience=document.get("audience") or [],
-        state=document.get("state"),
-        effective_date=document.get("effective_date"),
-        owner_team=document.get("owner_team"),
-    )
-
 
 @router.post(
     "",
-    response_model=ExtractedDocumentResponse,
+    response_model=EnrichmentResponse,
     summary="Upload, extract and enrich a file",
-    description="Upload a PDF file (multipart) and run extraction and enrichment in one call. Returns only document fields (file_id, source, document_type, technical_context, risk_level, audience, state, effective_date, owner_team). Sections are not returned.",
+    description="Upload a PDF file (multipart), run extraction and enrichment in one call. Returns enriched document and sections (file_id, source, document_type, technical_context, risk_level, audience, sections with heading, content, section_summary, keywords, etc.).",
 )
 @limiter.limit("10/minute")
 async def upload_extract_and_enrich(
@@ -46,17 +31,19 @@ async def upload_extract_and_enrich(
     user_id: Annotated[uuid.UUID, Depends(get_current_user_id)] = None,
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
-    """Call uploads (upload_file) then extractions (extract_from_file); return document fields only (no sections)."""
+    """Upload file, extract, enrich; return enriched document + sections in one response."""
     files_repo = FilesRepository(db)
     uploads_service = UploadsService(files_repo)
     extraction_service = ExtractionService(files_repo)
+    enrichment_service = EnrichmentService(files_repo)
 
     file_id, _ = await uploads_service.upload_file(user_id, file)
-    payload = await extraction_service.extract_from_file(file_id, user_id)
-    document = payload["document"]
-
-
-    enrichment_service = EnrichmentService(files_repo)
+    await extraction_service.extract_from_file(file_id, user_id)
     enrichment_payload = await enrichment_service.enrich_file(file_id, user_id)
-    return EnrichmentResponse(document=enrichment_payload)
+
+    document = dict(enrichment_payload.get("document") or {})
+    document.setdefault("file_id", str(file_id))
+    sections = list(enrichment_payload.get("sections") or [])
+
+    return EnrichmentResponse(document=document, sections=sections)
 

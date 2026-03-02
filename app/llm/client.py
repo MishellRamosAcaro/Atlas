@@ -9,12 +9,9 @@ from typing import Any
 
 from app.llm.config import LLMConfig
 
+
 LLM_PRESETS = {
-    "claude-haiku": "claude-3-5-haiku-20241022",
     "gemini-flash": "gemini-2.0-flash",
-    "deepseek_reasoner": "deepseek-reasoner",
-    "deepseek_chat": "deepseek-chat",
-    "openai-chatgpt": "gpt-4o-mini",
 }
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 

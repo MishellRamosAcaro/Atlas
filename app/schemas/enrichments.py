@@ -22,7 +22,7 @@ class EnrichmentRequestBody(BaseModel):
     )
     max_concurrent: int | None = Field(
         None,
-        description="Max concurrent section LLM calls.",
+        description="Max concurrent section LLM calls. Lower (e.g. 2 or 1) if you get 429 rate limit from the provider.",
     )
     temperature: float | None = Field(
         None,

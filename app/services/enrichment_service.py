@@ -133,6 +133,15 @@ class EnrichmentService:
                 detail=str(e),
             ) from e
         except Exception as e:
+            err_msg = str(e)
+            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg.upper():
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=(
+                        "LLM rate limit exceeded (429). Reduce load by sending "
+                        '"max_concurrent": 2 or 1 in the request body and retry later.'
+                    ),
+                ) from e
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Enrichment failed: {type(e).__name__}: {e}",
