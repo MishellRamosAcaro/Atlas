@@ -77,4 +77,5 @@ async def export_global_variable(
             detail="Unknown variable",
         )
     value = getattr(enrichment_global_variables, variable_name)
+
     return value
