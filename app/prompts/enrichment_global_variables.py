@@ -178,3 +178,17 @@ BLACKLIST = [
     "fluorometer",
     "bioanalyzer",
 ]
+
+DOCUMENT_TYPE_VALUES = "SOP | ApplicationNote | ValidationDoc | Marketing"
+RISK_LEVEL_VALUES = "Informational | Operational | Regulatory"
+AUDIENCE_VALUES = "Operator | FAS | Scientist"
+STATE_VALUES = "Validated | Deprecated | Draft"
+
+# Hierarchy keys for document-level keywords
+HIERARCHY_KEYS = [
+    "core_workflow_terms",
+    "technologies",
+    "biological_materials",
+    "critical_process_steps",
+    "regulatory_or_qc_terms",
+]

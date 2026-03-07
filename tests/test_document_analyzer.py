@@ -37,8 +37,8 @@ def test_parse_json_from_response_returns_none_on_invalid():
     assert _parse_json_from_response("") is None
 
 
-@patch("app.extraction.document_analyzer.load_blacklist", return_value=set())
-def test_process_document_does_not_modify_section_id_or_file_id(_mock_blacklist):
+@patch("app.extraction.document_analyzer.BLACKLIST", [])
+def test_process_document_does_not_modify_section_id_or_file_id():
     """Enrichment must not change section_id or file_id."""
     import uuid
 

@@ -1,8 +1,5 @@
 """Unit tests for keyword_refiner: blacklist, section and document refiner."""
 
-import tempfile
-from pathlib import Path
-
 import pytest
 
 from app.extraction.keyword_refiner import (
@@ -12,27 +9,12 @@ from app.extraction.keyword_refiner import (
 )
 
 
-def test_load_blacklist_returns_empty_when_path_none():
-    """load_blacklist(None) returns empty set."""
-    assert load_blacklist(None) == set()
-
-
-def test_load_blacklist_returns_empty_when_file_missing():
-    """load_blacklist(non_existent_path) returns empty set."""
-    assert load_blacklist("/nonexistent/black_list.txt") == set()
-
-
-def test_load_blacklist_loads_terms():
-    """load_blacklist reads file and returns lowercased terms."""
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
-        f.write("foo\nBAR\n  baz  \n\n")
-        f.flush()
-        path = f.name
-    try:
-        result = load_blacklist(path)
-        assert result == {"foo", "bar", "baz"}
-    finally:
-        Path(path).unlink(missing_ok=True)
+def test_load_blacklist_returns_global_blacklist():
+    """load_blacklist() returns global BLACKLIST as set."""
+    result = load_blacklist()
+    assert isinstance(result, set)
+    assert "the" in result
+    assert "a" in result
 
 
 def test_keyword_refiner_section_filters_blacklist():
@@ -68,7 +50,7 @@ def test_keyword_refiner_section_respects_top_k():
 
 
 def test_keyword_refiner_document_with_hierarchy():
-    """keyword_refiner_document builds keywords from hierarchy dict."""
+    """keyword_refiner_document builds keywords from hierarchy dict (scored per category)."""
     section_kw = [[("a", 1.0), ("b", 1.0)]]
     doc_raw = {
         "core_workflow_terms": ["x", "y"],
@@ -82,7 +64,14 @@ def test_keyword_refiner_document_with_hierarchy():
         top_per_category=15,
     )
     assert "keywords_hierarchy" in result
-    assert result["keywords_hierarchy"] == doc_raw
+    hierarchy = result["keywords_hierarchy"]
+    assert "core_workflow_terms" in hierarchy
+    assert "technologies" in hierarchy
+    # Each category is list of (term, score) tuples
+    core_terms = [t[0] for t in hierarchy["core_workflow_terms"]]
+    assert "x" in core_terms and "y" in core_terms
+    tech_terms = [t[0] for t in hierarchy["technologies"]]
+    assert "z" in tech_terms
     assert "keywords" in result
     assert isinstance(result["keywords"], list)
 

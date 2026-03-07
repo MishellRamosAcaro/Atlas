@@ -1,12 +1,6 @@
 """Prompt templates for section and document enrichment."""
 
-from app.prompts.blacklist import BLACKLIST
-
-
-DOCUMENT_TYPE_VALUES = "SOP | ApplicationNote | ValidationDoc | Marketing"
-RISK_LEVEL_VALUES = "Informational | Operational | Regulatory"
-AUDIENCE_VALUES = "Operator | FAS | Scientist"
-STATE_VALUES = "Validated | Deprecated | Draft"
+from app.prompts.enrichment_global_variables import BLACKLIST, DOCUMENT_TYPE_VALUES, RISK_LEVEL_VALUES, AUDIENCE_VALUES, STATE_VALUES
 
 
 def section_enrichment_template() -> str:
@@ -22,7 +16,7 @@ STRICT RULES:
 - keywords: List of the most relevant BIOLOGICAL and technical keywords for this section.
   * Apply MINIMUM FREQUENCY: prefer terms that appear at least 2 times in the section and/or represent essential protocol steps.
   * Restrict to BIOMEDICAL/TECHNICAL vocabulary. Prioritize biology-related terms (genes, assays, equipment, organisms, named procedures).
-  * Do NOT use these generic terms (blacklist): """ + BLACKLIST.join(", ") + """
+  * Do NOT use these generic terms (blacklist): """ + ", ".join(BLACKLIST) + """
   * Differentiate CENTRAL THEME (main workflow, critical steps) from merely mentioned terms; prefer central terms, exclude generic terms and terms not central to the workflow.
   * 3-15 keywords per section.
 
@@ -59,7 +53,7 @@ ALLOWED VALUES (use exactly these):
   - biological_materials
   - critical_process_steps
   - regulatory_or_qc_terms
-  Use biomedical vocabulary; avoid blacklist: """ +  BLACKLIST.join(", ") + """
+  Use biomedical vocabulary; avoid blacklist: """ + ", ".join(BLACKLIST) + """
   Include terms that appear in multiple sections or in title/intended use; exclude generic terms.
 
 Document context:

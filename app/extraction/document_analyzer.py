@@ -11,15 +11,15 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-from pathlib import Path
 from typing import Any
 
+from app.extraction.keyword_polisher import polish_keywords
 from app.extraction.keyword_refiner import (
     keyword_refiner_document,
     keyword_refiner_section,
-    load_blacklist,
 )
 from app.llm import LLMConfig, create_llm_client
+from app.prompts.enrichment_global_variables import BLACKLIST, DOCUMENT_TYPE_VALUES, RISK_LEVEL_VALUES, AUDIENCE_VALUES, STATE_VALUES
 from app.prompts.enrichment import (
     document_metadata_template,
     section_enrichment_template,
@@ -78,26 +78,17 @@ class DocumentSectionAnalyzer:
         config: LLMConfig | None = None,
         max_concurrent: int = 4,
         *,
-        blacklist_path: Path | str | None = None,
         anthropic_api_key: str | None = None,
         google_api_key: str | None = None,
         deepseek_api_key: str | None = None,
         openai_api_key: str | None = None,
     ) -> None:
-        if blacklist_path is None:
-            blacklist_path = (
-                Path(__file__).resolve().parent / "data" / "black_list.txt"
-            )
         self._config = config or LLMConfig.from_env()
         self._preset = preset
         self._max_concurrent = max_concurrent
-        self._blacklist = load_blacklist(blacklist_path)
-        self._section_template = section_enrichment_template(
-            ", ".join(sorted(self._blacklist)) if self._blacklist else "(none)"
-        )
-        self._document_template = document_metadata_template(
-            ", ".join(sorted(self._blacklist)) if self._blacklist else "(none)"
-        )
+        self._blacklist = set(BLACKLIST)
+        self._section_template = section_enrichment_template()
+        self._document_template = document_metadata_template()
         self._client = create_llm_client(
             preset,
             self._config,
@@ -324,7 +315,8 @@ class DocumentSectionAnalyzer:
                 f"Document analysis failed at document metadata: {e}"
             ) from e
 
-        return {
+        result = {
             "document": enriched_document,
             "sections": enriched_sections,
         }
+        return polish_keywords(result, blacklist=self._blacklist)

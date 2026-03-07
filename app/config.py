@@ -57,11 +57,7 @@ class Settings(BaseSettings):
 
     # LLM preset (required in .env as LLM_PRESET; no default)
     llm_preset: Literal[
-        "claude-haiku",
         "gemini-flash",
-        "deepseek_reasoner",
-        "deepseek_chat",
-        "openai-chatgpt",
     ]
 
     @field_validator("cors_origins", mode="before")
