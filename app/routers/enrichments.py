@@ -1,19 +1,30 @@
 """Enrichments endpoint: run LLM enrichment on an extracted file."""
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user_id
+from app.prompts import enrichment_global_variables
 from app.repositories.files_repository import FilesRepository
 from app.schemas.enrichments import EnrichmentRequestBody, EnrichmentResponse
 from app.services.enrichment_service import EnrichmentService
 
 router = APIRouter()
+
+# Allowed global variable names (no endpoint lists these; only fetch by name).
+_ALLOWED_GLOBAL_VARS = frozenset(
+    {
+        "DOCUMENT_TYPE_VALUES",
+        "RISK_LEVEL_VALUES",
+        "AUDIENCE_VALUES",
+        "STATE_VALUES"
+    }
+)
 
 
 @router.post(
@@ -47,3 +58,23 @@ async def enrich_file(
         document=result["document"],
         sections=result["sections"],
     )
+
+
+@router.get(
+    "/export_global_variable/{variable_name}",
+    response_model=Any,
+    summary="Get global variable value",
+    description="Returns the value of an enrichment global variable by name. No list of variable names is exposed.",
+)
+async def export_global_variable(
+    variable_name: str,
+    user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
+) -> Any:
+    """Return the value of the requested global variable. 404 if unknown."""
+    if variable_name not in _ALLOWED_GLOBAL_VARS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Unknown variable",
+        )
+    value = getattr(enrichment_global_variables, variable_name)
+    return value
