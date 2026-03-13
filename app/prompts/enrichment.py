@@ -38,10 +38,10 @@ def document_metadata_template() -> str:
     return f"""You are an FAS expert in document intelligence. Given the full document context (source, section headings, and section keywords), fill the document-level metadata AND document-level keywords in hierarchical form.
 
 ALLOWED VALUES (use exactly these):
-- document_type: one of """ + DOCUMENT_TYPE_VALUES + """
-- risk_level: one of """ + RISK_LEVEL_VALUES + """
-- audience: list of one or more of """ + AUDIENCE_VALUES + """
-- state: one of """ + STATE_VALUES + """
+- document_type: one of """ + ", ".join(DOCUMENT_TYPE_VALUES) + """
+- risk_level: one of """ + ", ".join(RISK_LEVEL_VALUES) + """
+- audience: list of one or more of """ + ", ".join(AUDIENCE_VALUES) + """
+- state: one of """ + ", ".join(STATE_VALUES) + """
 - technical_context: object with "equipment" (string or null), "version" (string or null), "workflow" (list of strings, e.g. ["NGS", "ELISA"])
 - effective_date: ISO-8601 date string or null
 - owner_team: string or null (e.g. QA, R&D, Applications)

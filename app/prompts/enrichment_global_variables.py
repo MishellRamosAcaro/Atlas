@@ -180,11 +180,30 @@ BLACKLIST = [
 ]
 
 DOCUMENT_TYPE_VALUES = [
-    "SOP",
-    "ApplicationNote",
-    "ValidationDoc",
-    "Marketing",
+    "Monograph",
+    "Textbook",
+    "Handbook",
+    "Manual",
+    "Standard Operating Procedure (SOP)",
+    "Protocol",
+    "Work instruction",
+    "Worksheet",
+    "Registration form",
+    "Template",
+    "Organizational document",
+    "Policy",
+    "Guideline",
+    "Quality manual",
+    "Scientific article",
+    "Conference paper",
+    "Thesis",
+    "Teaching material",
+    "Lecture slides",
+    "Training presentation",
+    "Equipment manual",
+    "Apparatus specification",
 ]
+
 RISK_LEVEL_VALUES = [
     "Informational",
     "Operational",
