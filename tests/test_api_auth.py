@@ -12,18 +12,10 @@ def client():
     return TestClient(app)
 
 
-def test_google_start_returns_url_and_state(client: TestClient):
-    """GET /auth/google/start returns authorization_url, state, code_verifier."""
-    # Note: This may fail if lifespan tries to create tables and DB is unavailable
-    try:
-        response = client.get("/auth/google/start")
-        if response.status_code == 500:
-            pytest.skip("Database not available (lifespan failed)")
-        assert response.status_code == 200
-        data = response.json()
-        assert "authorization_url" in data
-        assert "state" in data
-        assert "code_verifier" in data
-        assert "accounts.google.com" in data["authorization_url"]
-    except Exception:
-        pytest.skip("App startup failed (DB or other)")
+def test_auth_router_mount(client: TestClient):
+    """Auth router is mounted; token and register routes exist."""
+    # 405 Method Not Allowed for GET on POST-only routes indicates route exists
+    response = client.get("/auth/register")
+    assert response.status_code == 405
+    response = client.get("/auth/token")
+    assert response.status_code == 405

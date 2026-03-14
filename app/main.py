@@ -17,9 +17,9 @@ from app.infrastructure.base import Base
 from app.models import (  # noqa: F401 - register models
     File,
     LoginLockout,
-    OAuthIdentity,
     RefreshToken,
     User,
+    UserAccountStatus,
 )
 from app.routers import auth, contact, enrichments, extractions, upload_and_extract, uploads
 

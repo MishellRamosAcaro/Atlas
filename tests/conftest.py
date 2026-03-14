@@ -19,9 +19,9 @@ from app.infrastructure.base import Base
 from app.models import (  # noqa: F401 - register models for metadata
     File,
     LoginLockout,
-    OAuthIdentity,
     RefreshToken,
     User,
+    UserAccountStatus,
 )
 
 DATABASE_URL_TEST = os.getenv("DATABASE_URL_TEST")

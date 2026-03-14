@@ -1,23 +1,12 @@
 """Authentication request/response schemas."""
 
+import re
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
-
-class GoogleStartResponse(BaseModel):
-    """Response for GET /auth/google/start."""
-
-    authorization_url: str = Field(..., description="Google OAuth authorization URL")
-    state: str = Field(..., description="State for CSRF protection")
-    code_verifier: str = Field(..., description="PKCE code verifier for frontend")
-
-
-class GoogleCallbackRequest(BaseModel):
-    """Request for POST /auth/google/callback."""
-
-    id_token: str = Field(..., description="Google id_token from OAuth flow")
-    state: str = Field(..., description="State from /auth/google/start")
+# E.164: + followed by 1-9 and 1-14 digits
+E164_FULL_PATTERN = re.compile(r"^\+[1-9]\d{1,14}$")
 
 
 def _normalize_email(v: str) -> str:
@@ -42,6 +31,49 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=8, description="Password")
     first_name: str = Field(..., min_length=2, max_length=100, description="First name")
     last_name: str = Field(..., min_length=2, max_length=100, description="Last name")
+    country_code: str = Field(..., description="Phone country code (e.g. +34)")
+    phone_number_normalized: str = Field(
+        ...,
+        description="Phone number in E.164 format without + (e.g. 34612345678)",
+    )
+    accept_terms: bool = Field(..., description="User accepts terms of service")
+    accept_privacy: bool = Field(..., description="User accepts privacy policy")
+
+    @field_validator("country_code")
+    @classmethod
+    def validate_country_code(cls, v: str) -> str:
+        if not v or not v.startswith("+") or len(v) < 2 or len(v) > 5:
+            raise ValueError("Invalid country code (e.g. +34)")
+        if not re.match(r"^\+[1-9]\d{0,4}$", v):
+            raise ValueError("Invalid country code format")
+        return v.strip()
+
+    @field_validator("phone_number_normalized")
+    @classmethod
+    def validate_phone_e164(cls, v: str) -> str:
+        digits = v.strip().replace(" ", "").replace("-", "")
+        if not digits.isdigit() or len(digits) < 9 or len(digits) > 15:
+            raise ValueError("Invalid phone number (E.164)")
+        return digits
+
+    @model_validator(mode="after")
+    def require_acceptances(self):
+        if not self.accept_terms or not self.accept_privacy:
+            raise ValueError("You must accept the terms and privacy policy")
+        return self
+
+
+class VerifyEmailRequest(BaseModel):
+    """Request for POST /auth/verify-email."""
+
+    email: EmailStr = Field(..., description="User email")
+    code: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$", description="6-digit verification code")
+
+
+class ResendVerificationRequest(BaseModel):
+    """Request for POST /auth/resend-verification-code."""
+
+    email: EmailStr = Field(..., description="User email")
 
 
 class TokenRequest(BaseModel):
@@ -58,7 +90,32 @@ class PatchMeRequest(BaseModel):
     email: EmailStr | None = Field(None, description="User email")
     first_name: str | None = Field(None, min_length=2, max_length=100, description="First name")
     last_name: str | None = Field(None, min_length=2, max_length=100, description="Last name")
+    country_code: str | None = Field(None, description="Phone country code (e.g. +34)")
+    phone_number_normalized: str | None = Field(
+        None,
+        description="Phone number in E.164 format without + (e.g. 34612345678)",
+    )
     is_active: bool | None = Field(None, description="Account active flag")
+
+    @field_validator("country_code")
+    @classmethod
+    def validate_country_code_optional(cls, v: str | None) -> str | None:
+        if v is None or v == "":
+            return None
+        v = v.strip()
+        if not re.match(r"^\+[1-9]\d{0,4}$", v):
+            raise ValueError("Invalid country code (e.g. +34)")
+        return v
+
+    @field_validator("phone_number_normalized")
+    @classmethod
+    def validate_phone_optional(cls, v: str | None) -> str | None:
+        if v is None or v == "":
+            return None
+        digits = v.strip().replace(" ", "").replace("-", "")
+        if not digits.isdigit() or len(digits) < 9 or len(digits) > 15:
+            raise ValueError("Invalid phone number (E.164)")
+        return digits
 
     @model_validator(mode="after")
     def at_least_one_field(self):
@@ -66,6 +123,8 @@ class PatchMeRequest(BaseModel):
             self.email is None
             and self.first_name is None
             and self.last_name is None
+            and self.country_code is None
+            and self.phone_number_normalized is None
             and self.is_active is None
         ):
             raise ValueError("At least one field must be provided")
@@ -86,12 +145,15 @@ class DeleteAccountRequest(BaseModel):
 
 
 class MeResponse(BaseModel):
-    """Response for GET /auth/me."""
+    """Response for GET /auth/me. PATCH /auth/me may add email_pending_verification when email was changed."""
 
     id: UUID
     email: str
     name: str
     first_name: str
     last_name: str
+    country_code: str
+    phone_number_normalized: str
     is_active: bool
     roles: list[str]
+    email_pending_verification: bool = False

@@ -24,8 +24,8 @@ def sample_user():
         last_name="User",
         password_hash=None,
         roles=["user"],
-        is_active=True,
-        is_banned=False,
+        country_code="+1",
+        phone_number_normalized="10000000000",
     )
 
 

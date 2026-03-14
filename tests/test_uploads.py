@@ -45,12 +45,20 @@ async def test_user_id(db_engine):
         autoflush=False,
     )
     async with maker() as session:
+        from app.models.user_account_status import UserStatus
+        from app.repositories.user_account_status_repository import UserAccountStatusRepository
+
         repo = UserRepository(session)
         user = await repo.create(
             "uploadtest@test.com",
             "Up",
             "Load",
+            country_code="+1",
+            phone_number_normalized="10000000000",
         )
+        await session.flush()
+        status_repo = UserAccountStatusRepository(session)
+        await status_repo.create(user.id, status=UserStatus.ACTIVE)
         await session.commit()
         return user.id
 
@@ -230,7 +238,19 @@ async def test_delete_returns_404_if_not_owner(
     )
     async with maker() as session:
         user_repo = UserRepository(session)
-        other = await user_repo.create("other@test.com", "O", "Ther")
+        from app.repositories.user_account_status_repository import UserAccountStatusRepository
+        from app.models.user_account_status import UserStatus
+
+        other = await user_repo.create(
+            "other@test.com",
+            "O",
+            "Ther",
+            country_code="+1",
+            phone_number_normalized="10000000000",
+        )
+        await session.flush()
+        status_repo = UserAccountStatusRepository(session)
+        await status_repo.create(other.id, status=UserStatus.ACTIVE)
         await session.flush()
         repo = FilesRepository(session)
         await repo.create_file(

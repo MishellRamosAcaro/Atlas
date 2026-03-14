@@ -19,6 +19,7 @@ class EmailTemplateSpec:
     get_html: Callable[[EmailContext], str]
     get_text: Callable[[EmailContext], str]
     reply_to_key: str | None = None  # Key in context for Reply-To (e.g. "email")
+    to_address_key: str | None = None  # Key in context for dynamic "to" (e.g. "email")
 
 
 # _EMAIL_TEMPLATE: template_id -> spec (contact vs verification_code)

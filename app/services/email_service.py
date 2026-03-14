@@ -38,9 +38,14 @@ class EmailService:
         html = spec.get_html(str_context)
         text = spec.get_text(str_context)
 
+        to_addr = spec.to_address
+        if getattr(spec, "to_address_key", None) and spec.to_address_key in context:
+            to_addr = str(context[spec.to_address_key])
+        to_list = [to_addr] if to_addr else []
+
         params: dict[str, Any] = {
             "from": spec.from_address,
-            "to": [spec.to_address],
+            "to": to_list,
             "subject": subject,
             "html": html,
             "text": text,

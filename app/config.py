@@ -36,16 +36,18 @@ class Settings(BaseSettings):
     max_failed_login_attempts: int
     lockout_minutes: int
 
-    # Google OAuth
-    google_client_id: str
-    google_client_secret: str
-    google_redirect_uri: str  # Frontend callback URL (SPA)
-
     # CORS - comma-separated origins for prod (e.g. https://app.example.com)
     cors_origins: list[str]
 
     # Email (Resend)
     resend_api_key: str
+
+    # Email verification
+    verification_code_ttl_minutes: int
+    verification_max_attempts: int
+    verification_resend_cooldown_minutes: int
+    terms_version: str
+    privacy_version: str
 
     # Uploads (dev: local dir; prod: GCS bucket)
     uploads_storage_path: str

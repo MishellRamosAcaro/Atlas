@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Text, func
+from sqlalchemy import DateTime, Text, func
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,7 +14,7 @@ from app.infrastructure.base import Base
 class User(Base):
     """User entity.
 
-    Canonical identifier: email. Supports local (email/password) and OAuth (Google) login.
+    Canonical identifier: email. Supports local (email/password) login.
     """
 
     __tablename__ = "users"
@@ -28,16 +28,12 @@ class User(Base):
     first_name: Mapped[str] = mapped_column(Text, nullable=False)
     last_name: Mapped[str] = mapped_column(Text, nullable=False)
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    country_code: Mapped[str] = mapped_column(Text, nullable=False)
+    phone_number_normalized: Mapped[str] = mapped_column(Text, nullable=False)
     roles: Mapped[list[str]] = mapped_column(
         ARRAY(Text),
         nullable=False,
         server_default="{user}",
-    )
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default="true"
-    )
-    is_banned: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default="false"
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -51,9 +47,10 @@ class User(Base):
         onupdate=func.now(),
     )
 
-    oauth_identities: Mapped[list["OAuthIdentity"]] = relationship(
-        "OAuthIdentity",
+    account_status: Mapped["UserAccountStatus"] = relationship(
+        "UserAccountStatus",
         back_populates="user",
+        uselist=False,
         cascade="all, delete-orphan",
     )
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
@@ -78,11 +75,15 @@ class User(Base):
 
     @property
     def can_login(self) -> bool:
-        """Whether the user is allowed to log in."""
-        return self.is_active and not self.is_banned
+        """Whether the user is allowed to log in (active and verified)."""
+        if not self.account_status:
+            return False
+        from app.models.user_account_status import UserStatus
+
+        return self.account_status.status == UserStatus.ACTIVE
 
 
 if TYPE_CHECKING:
     from app.models.file import File
-    from app.models.oauth_identity import OAuthIdentity
     from app.models.refresh_token import RefreshToken
+    from app.models.user_account_status import UserAccountStatus

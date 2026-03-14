@@ -1,8 +1,5 @@
 """Authentication endpoints."""
 
-import base64
-import hashlib
-import secrets
 import uuid
 from typing import Annotated
 
@@ -16,15 +13,16 @@ from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user_id, get_refresh_token_from_cookie
 from app.middleware.cookies import clear_auth_cookies, set_auth_cookies
 from app.repositories.user_repository import UserRepository
+from app.models.user_account_status import UserStatus
 from app.schemas.auth import (
     DeleteAccountRequest,
-    GoogleCallbackRequest,
-    GoogleStartResponse,
     MeResponse,
     PatchMeRequest,
     PatchPasswordRequest,
     RegisterRequest,
+    ResendVerificationRequest,
     TokenRequest,
+    VerifyEmailRequest,
 )
 from app.services.auth_service import AuthService
 from app.services.jwt_service import JWTService
@@ -34,88 +32,62 @@ settings = get_settings()
 jwt_service = JWTService()
 
 
-def _make_code_challenge(code_verifier: str) -> str:
-    """Generate S256 PKCE code challenge."""
-    digest = hashlib.sha256(code_verifier.encode()).digest()
-    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
-
-
-@router.get(
-    "/google/start",
-    response_model=GoogleStartResponse,
-    summary="Start Google OAuth flow",
-    description="Returns OAuth URL, state, and PKCE code_verifier for frontend.",
-)
-@limiter.limit("30/minute")
-async def google_start(request: Request) -> GoogleStartResponse:
-    """Return Google OAuth authorization URL and PKCE params for frontend redirect."""
-    state = secrets.token_urlsafe(32)
-    code_verifier = secrets.token_urlsafe(64)
-    code_challenge = _make_code_challenge(code_verifier)
-
-    params = {
-        "client_id": settings.google_client_id,
-        "redirect_uri": settings.google_redirect_uri,
-        "response_type": "code",
-        "scope": "openid email profile",
-        "state": state,
-        "code_challenge": code_challenge,
-        "code_challenge_method": "S256",
-    }
-    qs = "&".join(f"{k}={v}" for k, v in params.items())
-    authorization_url = f"https://accounts.google.com/o/oauth2/v2/auth?{qs}"
-
-    return GoogleStartResponse(
-        authorization_url=authorization_url,
-        state=state,
-        code_verifier=code_verifier,
-    )
-
-
-@router.post(
-    "/google/callback",
-    summary="Complete Google OAuth login",
-    description="Accepts id_token from frontend, validates, and issues auth cookies.",
-)
-@limiter.limit("30/minute")
-async def google_callback(
-    body: GoogleCallbackRequest,
-    request: Request,
-    response: Response,
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict:
-    """Validate Google id_token and issue access + refresh tokens via cookies."""
-    auth_service = AuthService(db)
-    user, refresh_token = await auth_service.google_login(
-        id_token=body.id_token,
-        user_agent=request.headers.get("User-Agent"),
-        client_ip=request.client.host if request.client else None,
-    )
-    access_token = jwt_service.create_access_token(user)
-    set_auth_cookies(response, access_token, refresh_token)
-    return {"message": "Login successful"}
-
-
 @router.post(
     "/register",
     summary="Register new user",
-    description="Create account for local login (email/password).",
+    description="Create account for local login (email/password). Sends verification email.",
 )
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 async def register(
     request: Request,
     body: RegisterRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict:
-    """Register a new user with email and password."""
+    """Register a new user with email, password, and phone. Sends 6-digit verification code."""
     auth_service = AuthService(db)
     await auth_service.register(
         email=body.email,
         password=body.password,
         first_name=body.first_name,
         last_name=body.last_name,
+        country_code=body.country_code,
+        phone_number_normalized=body.phone_number_normalized,
     )
-    return {"message": "Registration successful"}
+    return {"message": "Registration successful. Check your email for the verification code."}
+
+
+@router.post(
+    "/verify-email",
+    summary="Verify email with code",
+    description="Confirm email with 6-digit code; activates account.",
+)
+@limiter.limit("3/minute")
+async def verify_email(
+    request: Request,
+    body: VerifyEmailRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Verify email with code; on success user can log in."""
+    auth_service = AuthService(db)
+    await auth_service.verify_email(email=body.email, code=body.code)
+    return {"message": "Email verified. You can now sign in."}
+
+
+@router.post(
+    "/resend-verification-code",
+    summary="Resend verification code",
+    description="Send a new 6-digit code (rate limited per email).",
+)
+@limiter.limit("2/minute")
+async def resend_verification_code(
+    request: Request,
+    body: ResendVerificationRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Resend verification code to email."""
+    auth_service = AuthService(db)
+    await auth_service.resend_verification_code(email=body.email)
+    return {"message": "Verification code sent."}
 
 
 @router.post(
@@ -123,7 +95,7 @@ async def register(
     summary="Obtain or refresh tokens",
     description="Password grant (local login) or refresh_token grant.",
 )
-@limiter.limit("30/minute")
+@limiter.limit("20/minute")
 async def token(
     body: TokenRequest | None,
     request: Request,
@@ -210,14 +182,21 @@ async def me(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
+    is_active = (
+        user.account_status is not None
+        and user.account_status.status == UserStatus.ACTIVE
+    )
     return MeResponse(
         id=user.id,
         email=user.email,
         name=user.name,
         first_name=user.first_name,
         last_name=user.last_name,
-        is_active=user.is_active,
+        country_code=user.country_code,
+        phone_number_normalized=user.phone_number_normalized,
+        is_active=is_active,
         roles=user.roles,
+        email_pending_verification=False,
     )
 
 
@@ -225,21 +204,32 @@ async def me(
     "/me",
     response_model=MeResponse,
     summary="Update current user profile",
-    description="Update email, name, or is_active. Email must be unique.",
+    description="Update email, name, phone, or is_active. If email changes, verification code is sent and sessions are invalidated.",
 )
 async def patch_me(
     body: PatchMeRequest,
+    response: Response,
     user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> MeResponse:
-    """Update current user profile (email, first_name, last_name, is_active)."""
+    """Update current user profile. When email changes, set PENDING_VERIFICATION and send code to new email."""
     auth_service = AuthService(db)
-    user = await auth_service.update_profile(
+    user, email_changed = await auth_service.update_profile(
         user_id,
         email=body.email.strip().lower() if body.email else None,
         first_name=body.first_name.strip() if body.first_name else None,
         last_name=body.last_name.strip() if body.last_name else None,
+        country_code=body.country_code.strip() if body.country_code else None,
+        phone_number_normalized=body.phone_number_normalized.strip()
+        if body.phone_number_normalized
+        else None,
         is_active=body.is_active,
+    )
+    if email_changed:
+        clear_auth_cookies(response)
+    is_active = (
+        user.account_status is not None
+        and user.account_status.status == UserStatus.ACTIVE
     )
     return MeResponse(
         id=user.id,
@@ -247,8 +237,11 @@ async def patch_me(
         name=user.name,
         first_name=user.first_name,
         last_name=user.last_name,
-        is_active=user.is_active,
+        country_code=user.country_code,
+        phone_number_normalized=user.phone_number_normalized,
+        is_active=is_active,
         roles=user.roles,
+        email_pending_verification=email_changed,
     )
 
 

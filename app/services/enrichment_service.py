@@ -117,8 +117,14 @@ class EnrichmentService:
             from app.config import get_settings
             llm_preset = get_settings().llm_preset
 
+        # create_llm_client expects a single preset str; config.llm_preset can be list[str]
+        if isinstance(llm_preset, list):
+            preset_str = llm_preset[0] if llm_preset else "gemini-flash"
+        else:
+            preset_str = llm_preset or "gemini-flash"
+
         analyzer = DocumentSectionAnalyzer(
-            preset=llm_preset,
+            preset=preset_str,
             config=config,
             max_concurrent=max_concurrent ,
         )
