@@ -39,7 +39,7 @@ async def upload_extract_and_enrich(
 
     file_id, _ = await uploads_service.upload_file(user_id, file)
     await extraction_service.extract_from_file(file_id, user_id)
-    enrichment_payload = await enrichment_service.enrich_file(file_id, user_id)
+    enrichment_payload = await enrichment_service.enrich_file(file_id, user_id, max_concurrent=3)
 
     document = dict(enrichment_payload.get("document") or {})
     document.setdefault("file_id", str(file_id))

@@ -120,7 +120,7 @@ class EnrichmentService:
         analyzer = DocumentSectionAnalyzer(
             preset=llm_preset,
             config=config,
-            max_concurrent=max_concurrent or 8,
+            max_concurrent=max_concurrent ,
         )
         try:
             enriched = await asyncio.to_thread(

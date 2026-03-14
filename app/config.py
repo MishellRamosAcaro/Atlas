@@ -17,48 +17,60 @@ class Settings(BaseSettings):
     )
 
     # Environment
-    env: Literal["dev", "prod"] = "dev"
+    env: Literal["dev", "prod"]
 
     # Database
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/atlas"
+    database_url: str
 
     # JWT
-    jwt_secret_key: str = "change-me-in-production"
-    jwt_algorithm: str = "HS256"
-    access_token_ttl_minutes: int = 15
-    refresh_token_ttl_days: int = 30
+    jwt_secret_key: str
+    jwt_algorithm: str
+    access_token_ttl_minutes: int
+    refresh_token_ttl_days: int
 
     # Session
-    max_sessions_per_user: int = 2
-    idle_timeout_days: int = 7
+    max_sessions_per_user: int
+    idle_timeout_days: int
 
     # Login lockout (brute-force protection)
-    max_failed_login_attempts: int = 5
-    lockout_minutes: int = 15
+    max_failed_login_attempts: int
+    lockout_minutes: int
 
     # Google OAuth
-    google_client_id: str = ""
-    google_client_secret: str = ""
-    google_redirect_uri: str = ""  # Frontend callback URL (SPA)
+    google_client_id: str
+    google_client_secret: str
+    google_redirect_uri: str  # Frontend callback URL (SPA)
 
     # CORS - comma-separated origins for prod (e.g. https://app.example.com)
-    cors_origins: list[str] = ["*"]
+    cors_origins: list[str]
+
+    # Email (Resend)
+    resend_api_key: str
 
     # Uploads (dev: local dir; prod: GCS bucket)
-    uploads_storage_path: str = "./data"
-    uploads_gcs_bucket: str | None = None  # Set in prod for Google Cloud Storage
+    uploads_storage_path: str
+    uploads_gcs_bucket: str | None  # Set in prod for Google Cloud Storage
     # Antivirus: in prod a scanner must run; dev can use mock
-    uploads_antivirus_enabled: bool = False  # True in prod
+    uploads_antivirus_enabled: bool
 
     # Cookie
-    cookie_domain: str | None = None
-    cookie_secure: bool = True
-    cookie_same_site: Literal["lax", "strict", "none"] = "none"
+    cookie_domain: str | None
+    cookie_secure: bool
+    cookie_same_site: Literal["lax", "strict", "none"]
 
-    # LLM preset (required in .env as LLM_PRESET; no default)
-    llm_preset: Literal[
-        "gemini-flash",
-    ]
+    # LLM preset (required in .env as LLM_PRESET)
+    llm_preset: list[str]
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings,
+        env_settings,
+        dotenv_settings,
+        file_secret_settings,
+    ):
+        return (dotenv_settings, env_settings)
 
     @field_validator("cors_origins", mode="before")
     @classmethod

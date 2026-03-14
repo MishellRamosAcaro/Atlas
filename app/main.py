@@ -21,7 +21,7 @@ from app.models import (  # noqa: F401 - register models
     RefreshToken,
     User,
 )
-from app.routers import auth, enrichments, extractions, upload_and_extract, uploads
+from app.routers import auth, contact, enrichments, extractions, upload_and_extract, uploads
 
 settings = get_settings()
 
@@ -70,6 +70,7 @@ app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(uploads.router, prefix="/uploads", tags=["Uploads"])
 app.include_router(extractions.router, prefix="/extractions", tags=["Extractions"])
 app.include_router(enrichments.router, prefix="/enrichments", tags=["Enrichments"])
+app.include_router(contact.router, prefix="/contact", tags=["Contact"])
 app.include_router(
     upload_and_extract.router,
     prefix="/upload-and-extract",
