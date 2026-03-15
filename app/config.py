@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     cookie_secure: bool
     cookie_same_site: Literal["lax", "strict", "none"]
 
-    # LLM preset (required in .env as LLM_PRESET)
+    # LLM preset: one or more presets from .env (LLM_PRESET=gemini-flash or LLM_PRESET=gemini-flash,claude-haiku)
     llm_preset: list[str]
 
     @classmethod
@@ -85,6 +85,28 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         return ["*"]
+
+    @field_validator("llm_preset", mode="before")
+    @classmethod
+    def parse_llm_preset(cls, v: str | list[str]) -> list[str]:
+        """Parse LLM preset(s) from comma-separated string or list. One or more values."""
+        if isinstance(v, list):
+            out = [p.strip() for p in v if isinstance(p, str) and p.strip()]
+        elif isinstance(v, str):
+            out = [p.strip() for p in v.split(",") if p.strip()]
+        else:
+            out = []
+        return out
+
+    @model_validator(mode="after")
+    def llm_preset_non_empty(self) -> "Settings":
+        """LLM_PRESET must contain at least one preset (from .env)."""
+        if not self.llm_preset:
+            raise ValueError(
+                "LLM_PRESET must have at least one value. "
+                "Set it in .env (e.g. LLM_PRESET=gemini-flash or LLM_PRESET=gemini-flash,claude-haiku)."
+            )
+        return self
 
     @property
     def is_production(self) -> bool:

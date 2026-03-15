@@ -11,7 +11,7 @@ from fastapi import HTTPException, status
 
 from app.extraction.document_analyzer import DocumentSectionAnalyzer
 from app.infrastructure.storage import StorageError, get_storage
-from app.llm import LLMConfig
+from app.llm import LLMConfig, LLMConfigError
 from app.repositories.files_repository import FilesRepository
 
 
@@ -105,7 +105,14 @@ class EnrichmentService:
             )
         relative_path = file_record.extracted_doc_path
 
-        config = LLMConfig.from_env()
+        try:
+            config = LLMConfig.from_env()
+        except LLMConfigError as e:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"LLM configuration error: {e}. Set all LLM_* variables in .env.",
+            ) from e
+
         if temperature is not None:
             config.temperature = temperature
         if max_tokens is not None:
@@ -119,9 +126,15 @@ class EnrichmentService:
 
         # create_llm_client expects a single preset str; config.llm_preset can be list[str]
         if isinstance(llm_preset, list):
-            preset_str = llm_preset[0] if llm_preset else "gemini-flash"
+            preset_str = llm_preset[0] if llm_preset else None
         else:
-            preset_str = llm_preset or "gemini-flash"
+            preset_str = llm_preset
+
+        if not preset_str:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="LLM_PRESET is required. Set it in .env (e.g. LLM_PRESET=gemini-flash).",
+            )
 
         analyzer = DocumentSectionAnalyzer(
             preset=preset_str,

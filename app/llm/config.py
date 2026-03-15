@@ -6,49 +6,59 @@ import os
 from dataclasses import dataclass
 
 
+class LLMConfigError(Exception):
+    """Raised when a required LLM env var is missing or invalid."""
+
+
 @dataclass
 class LLMConfig:
     """
-    Global LLM configuration.
-
-    Resolution order: 1) constructor args, 2) environment variables,
-    3) in-code defaults. Use from_env() to build from env; constructor
-    values take precedence when passed explicitly.
+    Global LLM configuration. All values are read from .env; there are no
+    in-code defaults. Use from_env() to build from environment variables.
+    Constructor args can be used to override after loading (e.g. from request body).
     """
 
-    temperature: float = 0.2
-    max_tokens: int = 8192
-    top_p: float = 1.0
-    timeout: float = 120.0
-    max_retries: int = 1
+    temperature: float
+    max_tokens: int
+    top_p: float
+    timeout: float
+    max_retries: int
 
     @classmethod
     def from_env(cls) -> LLMConfig:
-        """Build config from environment variables (and in-code defaults)."""
+        """Build config from environment variables only. Raises LLMConfigError if any var is missing or invalid."""
         return cls(
-            temperature=_float_from_env("LLM_TEMPERATURE", 0.2),
-            max_tokens=_int_from_env("LLM_MAX_TOKENS", 4096),
-            top_p=_float_from_env("LLM_TOP_P", 1.0),
-            timeout=_float_from_env("LLM_TIMEOUT", 120.0),
-            max_retries=_int_from_env("LLM_MAX_RETRIES", 3),
+            temperature=_required_float_from_env("LLM_TEMPERATURE"),
+            max_tokens=_required_int_from_env("LLM_MAX_TOKENS"),
+            top_p=_required_float_from_env("LLM_TOP_P"),
+            timeout=_required_float_from_env("LLM_TIMEOUT"),
+            max_retries=_required_int_from_env("LLM_MAX_RETRIES"),
         )
 
 
-def _float_from_env(name: str, default: float) -> float:
+def _required_float_from_env(name: str) -> float:
     raw = os.environ.get(name)
-    if raw is None:
-        return default
+    if raw is None or (isinstance(raw, str) and raw.strip() == ""):
+        raise LLMConfigError(
+            f"Missing required env var: {name}. Set it in .env (e.g. in the LLM tuning section)."
+        )
     try:
         return float(raw)
-    except ValueError:
-        return default
+    except ValueError as e:
+        raise LLMConfigError(
+            f"Invalid value for {name}: {raw!r}. Must be a number."
+        ) from e
 
 
-def _int_from_env(name: str, default: int) -> int:
+def _required_int_from_env(name: str) -> int:
     raw = os.environ.get(name)
-    if raw is None:
-        return default
+    if raw is None or (isinstance(raw, str) and raw.strip() == ""):
+        raise LLMConfigError(
+            f"Missing required env var: {name}. Set it in .env (e.g. in the LLM tuning section)."
+        )
     try:
         return int(raw)
-    except ValueError:
-        return default
+    except ValueError as e:
+        raise LLMConfigError(
+            f"Invalid value for {name}: {raw!r}. Must be an integer."
+        ) from e

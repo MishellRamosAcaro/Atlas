@@ -13,7 +13,13 @@ load_dotenv(_env_path)
 
 os.environ["ENV"] = "dev"
 os.environ["JWT_SECRET_KEY"] = "test-secret"
+# LLM: all required from .env (no defaults in code); set for tests
 os.environ.setdefault("LLM_PRESET", "gemini-flash")
+os.environ.setdefault("LLM_TEMPERATURE", "0.2")
+os.environ.setdefault("LLM_MAX_TOKENS", "8192")
+os.environ.setdefault("LLM_TOP_P", "1.0")
+os.environ.setdefault("LLM_TIMEOUT", "120.0")
+os.environ.setdefault("LLM_MAX_RETRIES", "1")
 
 from app.infrastructure.base import Base
 from app.models import (  # noqa: F401 - register models for metadata
