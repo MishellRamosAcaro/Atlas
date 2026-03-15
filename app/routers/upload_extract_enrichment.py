@@ -1,4 +1,4 @@
-"""Upload and extractions endpoint: upload file then run extraction in one call."""
+"""Upload, extract and enrichment endpoint: upload file then run extraction and enrichment in one call."""
 
 import uuid
 from typing import Annotated
@@ -46,4 +46,3 @@ async def upload_extract_and_enrich(
     sections = list(enrichment_payload.get("sections") or [])
 
     return EnrichmentResponse(document=document, sections=sections)
-

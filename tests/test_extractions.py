@@ -90,7 +90,7 @@ def extraction_storage_tmp(monkeypatch):
     """Use a temp dir for storage in extraction tests.
 
     Patch infrastructure, extraction_service, and uploads_service so that
-    upload_and_extract flow (uploads then extractions) uses the same tmp dir.
+    upload_extract_enrichment flow (uploads then extractions) uses the same tmp dir.
     """
     from app.infrastructure.storage import FileSystemStorage
 
@@ -264,17 +264,17 @@ async def test_post_extractions_200_returns_document_and_sections(
         assert "extraction_confidence" not in sec
 
 
-# --- POST /upload-and-extract (upload then extract in one call) ---
+# --- POST /upload-extract-enrichment (upload then extract and enrich in one call) ---
 
 
 @pytest.mark.asyncio
-async def test_post_upload_and_extract_200_returns_document_fields_only(
+async def test_post_upload_extract_enrichment_200_returns_document_fields_only(
     async_client, test_user_id, auth_override, override_get_db
 ):
-    """POST /upload-and-extract returns 200 with document fields only (no sections)."""
+    """POST /upload-extract-enrichment returns 200 with document fields only (no sections)."""
     auth_override
     response = await async_client.post(
-        "/upload-and-extract",
+        "/upload-extract-enrichment",
         files={
             "file": (
                 "sample.pdf",
@@ -302,13 +302,13 @@ async def test_post_upload_and_extract_200_returns_document_fields_only(
 
 
 @pytest.mark.asyncio
-async def test_post_upload_and_extract_400_when_not_pdf(
+async def test_post_upload_extract_enrichment_400_when_not_pdf(
     async_client, test_user_id, auth_override, override_get_db
 ):
-    """POST /upload-and-extract returns 400 when file is not PDF."""
+    """POST /upload-extract-enrichment returns 400 when file is not PDF."""
     auth_override
     response = await async_client.post(
-        "/upload-and-extract",
+        "/upload-extract-enrichment",
         files={
             "file": (
                 "doc.txt",

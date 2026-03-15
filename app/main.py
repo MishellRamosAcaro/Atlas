@@ -21,7 +21,7 @@ from app.models import (  # noqa: F401 - register models
     User,
     UserAccountStatus,
 )
-from app.routers import auth, contact, enrichments, extractions, upload_and_extract, uploads
+from app.routers import auth, contact, enrichments, extractions, upload_extract_enrichment, uploads
 
 settings = get_settings()
 
@@ -72,7 +72,7 @@ app.include_router(extractions.router, prefix="/extractions", tags=["Extractions
 app.include_router(enrichments.router, prefix="/enrichments", tags=["Enrichments"])
 app.include_router(contact.router, prefix="/contact", tags=["Contact"])
 app.include_router(
-    upload_and_extract.router,
-    prefix="/upload-and-extract",
-    tags=["Upload and extract files"],
+    upload_extract_enrichment.router,
+    prefix="/upload-extract-enrichment",
+    tags=["Upload, extract and enrichment"],
 )
