@@ -14,13 +14,18 @@ El servicio centraliza:
 
 De este modo, el frontend queda desacoplado de la lógica interna, limitándose a la presentación, validación básica y comunicación con la API.
 
-Este documento está dirigido a desarrolladores responsables del mantenimiento y evolución del backend Atlas, y describe la arquitectura, responsabilidades y puntos de extensión necesarios para añadir nuevas funcionalidades o modificar el comportamiento existente.
+No hay que olvidarse de que este proyecto se encuentra actualmente en fase de **MVP**.  
+Por este motivo, tanto la arquitectura como la estructura interna y los estándares de calidad del código continuarán evolucionando a medida que el sistema madure.
+
+Se trata de un proyecto con una gran incertidumbre, en el que las decisiones técnicas y de diseño se ajustan de forma iterativa en función de las necesidades funcionales, operativas y de producto de cada momento.  
+En consecuencia, la solución actual debe entenderse como una base evolutiva, diseñada para crecer y refinarse progresivamente conforme aumente la estabilidad del negocio y se consoliden los requisitos de parte del cliente. 
+
 
 ---
 
 ## 2. Stack tecnológico utilizado
 
-## 2.1 Stack tecnológico Principal
+### 2.1 Stack tecnológico Principal
 
 | Categoría        | Tecnología | Versión | ¿Por qué se ha elegido está tecnología y versión? |
 |------------------|------------|---------|--------------------------------------|
@@ -34,7 +39,7 @@ Este documento está dirigido a desarrolladores responsables del mantenimiento y
 | **Tests**        | pytest | 9.0.2 | Framework de testing maduro, flexible y estándar en proyectos Python. |
 | **Base de datos**| PostgreSQL | 16.10 | Se elige por su robustez, soporte ACID completo y capacidades avanzadas adecuadas para aplicaciones backend críticas.SDe |
 
-## 2.2 Dependencias Secundarias poyo
+### 2.2 Dependencias secundarias de apoyo
 
 | Categoría        | Tecnología | Versión | ¿Por qué se ha elegido esta versión? |
 |------------------|------------|---------|--------------------------------------|
@@ -57,7 +62,7 @@ Este documento está dirigido a desarrolladores responsables del mantenimiento y
 La fecha de la última actualización es **15/03/2026**. Durante el desarrollo se ha hecho mucho hincapié en la actualización y el parcheo de las distintas versiones de las librerías utilizadas para que no haya errores de seguridad. 
 
 
-## 2.3 Dependencias Futuras
+### 2.3 Dependencias futuras
 
 En el futuro se tiene contemplado utilizar esta librería, ya que, una vez desplegada la aplicación en producción, los datos almacenados en la base de datos deberán modificarse con frecuencia. Se trata de una aplicación con un alto nivel de incertidumbre, por lo que los cambios en el diseño son constantes.
 
@@ -127,7 +132,7 @@ El archivo `.env.example` contiene la mayoría de variables preconfiguradas para
 
 > **Nota:** No es necesario tener un frontend en ejecución, ya que el backend funciona de forma independiente y puede utilizarse directsmente mediante peticiones HTTP a la API desde herramientas como Postman o desde la documentación interactiva generada automáticamente (Swagger / OpenAPI).
 
-#### 3.1.2 Creación del entorno virtual e instalación de dependencias
+#### 3.1.3 Creación del entorno virtual e instalación de dependencias
 
 Desde el directorio raíz del proyecto descargado, se debe crear un entorno virtual de Python para aislar las dependencias del sistema y garantizar que el backend se ejecute con las versiones correctas de las librerías.
 
@@ -141,7 +146,7 @@ $ source .venv/bin/activate   # En Windows: .venv\Scripts\activate
 (.venv)$ pip install -r requirements.txt
 ```
 
-#### 3.1.3 Ejecutar el servidor Uvicorn
+#### 3.1.4 Ejecutar el servidor Uvicorn
 
 Una vez instaladas las dependencias y activado el entorno virtual, se puede iniciar el servidor ASGI utilizando **Uvicorn**, que es el servidor instalado y recomentado para FastAPI.
 
@@ -160,7 +165,7 @@ Una vez iniciado el servidor, la API estará disponible en:
 > **Nota:** La documentación interactiva solo estará disponible cuando la variable de entorno ENV esté configurada como dev, ya que en entornos de producción estas rutas pueden deshabilitarse por motivos de seguridad.
 
 
-#### 3.1.4 Ejecutar tests
+#### 3.1.5 Ejecutar tests
 
 Para ejecutar los tests es necesario disponer de una base de datos independiente para testing.  
 El proyecto está configurado para usar una base de datos llamada `atlas_test`, definida en la variable de entorno `DATABASE_URL_TEST`.
@@ -176,14 +181,36 @@ Salida esperada:
 
 CREATE DATABASE
 ```
+Una vez creada la base de datos, se pueden ejecutar los tests con el siguiente comando `python -m pytest tests/ -v`
 
-Una vez creada la base de datos, se pueden ejecutar los tests:
+Este comando ejecuta todos los tests del directorio tests/ mostrando información detallada.s
 
-python -m pytest tests/ -v
 
-Este comando ejecuta todos los tests del directorio tests/ mostrando información detallada.
+```bash
+(.venv)$ python -m pytest tests/-v
 
-#### 3.1.5 Formateo de código con Black
+=============================== test session starts ================================
+platform linux -- Python 3.12.3, pytest-9.0.2, pluggy-1.6.0 -- /home/mishellramos/projects/FASEnvDev/Atlas/.venv/bin/python                                             
+cachedir: .pytest_cache
+rootdir: /home/mishellramos/projects/FASEnvDev/Atlas
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-1.3.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function                                                 
+collected 48 items                                                                 
+
+tests/test_api_auth.py::test_auth_router_mount PASSED                        [  2%]
+...
+tests/test_uploads.py::test_post_uploads_infected_removes_file_and_record PASSED [100%]                                                                                 
+
+================================= warnings summary =================================
+.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854
+  /home/mishellramos/projects/FASEnvDev/Atlas/.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13                                                             
+    from crypt import crypt as _crypt
+...
+========================= 48 passed, 3 warnings in 10.37s ==========================
+```
+
+#### 3.1.6 Formateo de código con Black
 
 Black se utiliza para mantener un formato de código consistente en todo el proyecto.
 El formateo no modifica la lógica del programa, únicamente el estilo. Se ejecuta desde la raiz del proyecto:
@@ -195,10 +222,9 @@ reformatted app/application/use_cases/__init__.py
 reformatted app/application/__init__.py
 ...
 All done! 47 files reformatted, 48 files left unchanged.
-
 ```
 
-#### 3.1.6 Análisis estático con Ruff
+#### 3.1.7 Análisis estático con Ruff
 
 Ruff se utiliza como linter principal para detectar errores, imports no usados y problemas de estilo antes de ejecutar el código.
 
@@ -210,6 +236,10 @@ F401 `DOCUMENT_TYPE_VALUES` imported but unused
 
 Found 26 errors.
 14 fixable with the --fix option.
+
+(.venv)$ ruff check .
+
+All checks passed!
 ```
 
 Para corregir automáticamente los errores que lo permitan:
@@ -217,68 +247,60 @@ Para corregir automáticamente los errores que lo permitan:
 (.venv)$  ruff check . --fix
 ```
 
-## 4. Estructura del proyecto
+## 4. Estructura del proyecto y arquitectura aplicada
 
-```
-Atlas/
-├── app/
-│   ├── main.py                 # Punto de entrada FastAPI, CORS, rate limit, routers
-│   ├── config.py                # Configuración (Pydantic Settings v2)
-│   ├── limiter.py               # Instancia SlowAPI (rate limiting por IP)
-│   ├── routers/                 # Endpoints por dominio
-│   │   ├── auth.py              # Registro, login, verify-email, refresh, /me, borrado cuenta
-│   │   ├── contact.py            # POST /contact (formulario + email en background)
-│   │   ├── uploads.py           # Subida, listado, metadatos, descarga, borrado de archivos
-│   │   ├── extractions.py       # Lectura/actualización del documento extraído por file_id
-│   │   ├── enrichments.py       # Enriquecimiento bajo demanda por file_id
-│   │   └── upload_extract_enrichment.py # Flujo único: subir → extraer → enriquecer
-│   ├── services/                # Lógica de negocio
-│   │   ├── auth_service.py      # Registro, verificación, login, sesiones
-│   │   ├── email_service.py     # Envío de emails (Resend, plantillas)
-│   │   ├── uploads_service.py   # Subida, almacenamiento, antivirus, cuota
-│   │   ├── extraction_service.py # Orquesta extracción y persistencia del resultado
-│   │   ├── enrichment_service.py # Enriquecimiento con LLM y persistencia
-│   │   └── jwt_service.py       # Creación y validación de JWT
-│   ├── repositories/           # Acceso a datos (una capa por modelo/agregado)
-│   │   ├── user_repository.py
-│   │   ├── user_account_status_repository.py
-│   │   ├── refresh_token_repository.py
-│   │   ├── login_lockout_repository.py
-│   │   └── files_repository.py
-│   ├── models/                  # Modelos SQLAlchemy (User, File, RefreshToken, etc.)
-│   ├── schemas/                 # Esquemas Pydantic (request/response)
-│   ├── middleware/              # Cookies, auth, security headers, emails
-│   ├── infrastructure/          # DB engine, sesiones, almacenamiento, antivirus
-│   ├── extraction/              # Pipeline de extracción de PDFs
-│   │   ├── pipeline.py         # Orquestación: layout → segmentación → chunking → keywords
-│   │   ├── layout_extraction.py
-│   │   ├── structural_segmentation.py
-│   │   ├── semantic_chunking.py
-│   │   ├── document_analyzer.py
-│   │   ├── keywords.py, keyword_polisher.py, keyword_refiner.py
-│   │   └── block_cleaner.py, schemas.py
-│   ├── llm/                     # Cliente unificado LLM (varios proveedores)
-│   │   ├── config.py
-│   │   └── client.py
-│   ├── application/             # Capa de aplicación (puertos para evolución hexagonal)
-│   │   ├── ports/               # Interfaces (repositorios, LLM, storage, antivirus)
-│   │   ├── use_cases/
-│   │   └── prompts/
-│   ├── prompts/                 # Plantillas de prompts para enriquecimiento
-│   └── templates/               # Plantillas de email (contacto, registro, etc.)
-├── tests/                       # Tests unitarios e integración (pytest)
-├── requirements.txt
-├── .env.example
-└── README.md
-```
+El proyecto sigue una organización **modular, desacoplada y orientada a responsabilidades**, con el fin de facilitar el mantenimiento, la evolución funcional y la incorporación de nuevas capacidades sin degradar la coherencia del sistema.
 
-- **routers**: definen las rutas HTTP y delegan en servicios.
-- **services**: orquestan repositorios, infraestructura y reglas de negocio.
-- **repositories**: abstraen el acceso a PostgreSQL.
-- **infrastructure**: motor de BD, almacenamiento de archivos, escáner antivirus.
-- **extraction**: pipeline de PDF (layout → segmentos → secciones → keywords).
-- **llm**: abstracción sobre varios proveedores de LLM para enriquecimiento.
-- **application/ports**: interfaces para una futura arquitectura hexagonal.
+Atlas no se organiza como un monolito alrededor del framework, sino como un backend con separación explícita entre **interfaz HTTP**, **lógica de aplicación**, **dominio funcional**, **persistencia** e **integraciones externas**. Con ello se reduce el acoplamiento entre capas, se mejora la trazabilidad de cambios y cada parte del sistema puede evolucionar con impacto acotado.
+
+
+### 4.1 Arquitectura utilizada
+
+La arquitectura se describe como **por capas con evolución hacia un enfoque hexagonal**. El sistema se divide en:
+
+- **Capa de entrada**: expone la API REST y gestiona el contrato HTTP.
+- **Capa de servicios o aplicación**: orquesta los casos de uso y concentra la lógica operativa.
+- **Capa de persistencia**: encapsula el acceso a PostgreSQL y evita que la lógica de negocio dependa de consultas o detalles del ORM.
+- **Capa de infraestructura**: implementa almacenamiento, base de datos, antivirus, correo y clientes LLM.
+- **Capa de extracción y enriquecimiento**: encapsula pipelines de procesamiento documental y uso de LLMs.
+- **Capa de aplicación/puertos**: define interfaces que preparan la evolución hacia arquitectura hexagonal y permiten sustituir implementaciones sin alterar la lógica de negocio.
+
+
+#### Evolución hacia arquitectura hexagonal
+
+La capa `application` con puertos y casos de uso orienta el diseño hacia una arquitectura más desacoplada y basada en interfaces. La lógica de aplicación depende de contratos, no de implementaciones concretas, lo que facilita:
+
+- Sustituir repositorios.
+- Cambiar proveedores LLM.
+- Modificar almacenamiento.
+- Introducir nuevos adaptadores.
+- Aislar mejor las pruebas.
+
+El proyecto sigue siendo pragmático y orientado a entrega; esta base evita que el crecimiento derive en una arquitectura rígida o excesivamente acoplada al framework.
+
+
+### 4.2 Decisión arquitectónica
+
+La estructura no aplica patrones de forma dogmática, sino que resuelve un problema concreto: un backend que combina API REST, persistencia relacional, procesamiento documental e integración con IA sin convertirse en un monolito difícil de mantener. En resumen:
+
+- **Arquitectura modular por capas**.
+- **Separación explícita** entre API, aplicación, persistencia e infraestructura.
+- **Dominios funcionales** bien delimitados.
+- **Preparación para evolución hacia arquitectura hexagonal** donde aporta valor.
+
+### 4.3 Mejoras y evolución futura
+
+La estructura actual es sólida para el estado presente y está preparada para evolucionar. Mejoras razonables a futuro:
+
+- Consolidar la **capa de casos de uso**, desplazando la orquestación desde servicios hacia una capa de aplicación más explícita.
+- Completar la transición a **arquitectura hexagonal**, con dependencias externas únicamente a través de puertos definidos.
+- Reorganizar por **bounded contexts** más explícitos si el sistema crece (p. ej. identidad, documentos, extracción y enriquecimiento como dominios independientes).
+- Introducir **eventos de dominio o colas asíncronas** para procesos costosos (extracción, antivirus, enriquecimiento con LLM).
+- Reforzar el aislamiento entre componentes con **contratos internos más estrictos**, sobre todo en flujos de procesamiento documental.
+- Incorporar observabilidad avanzada: **tracing, métricas técnicas y auditoría funcional**.
+- Formalizar decisiones estructurales con **ADRs (Architecture Decision Records)**.
+
+En conjunto, la estructura actual cubre las necesidades presentes de Atlas y establece una base técnica para crecer sin perder control sobre la complejidad del sistema.
 
 ---
 
@@ -373,7 +395,7 @@ El backend gestiona los datos persistentes asociados al usuario autenticado y ga
   - Then: El backend elimina la cuenta y todos los datos asociados.
 
 
-### 5.2 Subida y gestión de archivos
+### 5.3 Subida y gestión de archivos
 
 Validar tipo y tamaño de archivo, aplicar cuota por usuario, persistir el binario en almacenamiento (local o cloud), ejecutar escaneo antivirus en producción y mantener metadatos y estado del archivo en PostgreSQL.
 
@@ -408,7 +430,7 @@ Validar tipo y tamaño de archivo, aplicar cuota por usuario, persistir el binar
   - Almacenamiento: en desarrollo se usa un directorio local configurado por variable de entorno; en el futuro se pretende usar Google Cloud Storage (GCS), configurado mediante bucket y credenciales.
   - Antivirus: en el futuro se pretende ejecutar un escáner sobre el archivo subido; si el resultado es infectado, el archivo y el registro se eliminan y se devuelve error al cliente. Se ha dejado preprarada la estructura para poder realizarlo. Ahora todos los archivos tienen el estado CLEAN. 
 
-### 5.3 Extracción de documentos
+### 5.4 Extracción de documentos
 
 Ejecutar la extracción del contenido del documento (actualmente PDF) para generar una representación estructurada persistente, utilizada posteriormente como entrada del proceso de enriquecimiento mediante LLM.  
 La extracción previa permite reducir el número de tokens consumidos durante el enriquecimiento, evitando enviar el documento completo al modelo.
@@ -442,7 +464,7 @@ Se produce un JSON estructurado con el documento y sus secciones (heading, conte
   - When: El usuario envía campos a actualizar (source, document_type, technical_context, risk_level, audience, state, effective_date, owner_team).
   - Then: El backend actualiza el JSON en almacenamiento y, si se modifica source.file_name, sincroniza el filename en la tabla de archivos.
 
-### 5.4 Enriquecimiento con LLM
+### 5.5 Enriquecimiento con LLM
 
 Ejecutar el proceso de enriquecimiento sobre un documento previamente extraído, invocando al proveedor de LLM configurado para generar metadatos a nivel de documento y de sección, y persistiendo el resultado enriquecido.  
 
@@ -474,7 +496,7 @@ Se genera un JSON enriquecido que contiene metadatos a nivel de documento y por 
   - When: El cliente solicita el valor de una variable global.
   - Then: El backend devuelve el valor; error si el nombre no está permitido.
 
-### 5.5 Flujo único: subida, extracción y enriquecimiento
+### 5.6 Flujo único: subida, extracción y enriquecimiento
 
 Ofrecer un único endpoint que orqueste en secuencia:  
 (1) subida y validación del archivo,  
@@ -504,7 +526,7 @@ El registro del archivo en la base de datos referencia tanto el contenido origin
   - When: El usuario envía un archivo en formato multipart (PDF).
   - Then: El backend sube el archivo, ejecuta la extracción y el enriquecimiento, y devuelve el documento enriquecido y las secciones (document_type, technical_context, risk_level, audience, section_summary, keywords). Rate limiting aplicado (p. ej. 10/minuto por IP).
 
-### 5.6 Formulario de contacto
+### 5.7 Formulario de contacto
 
 Recibir el payload del formulario (nombre, email, empresa, mensaje), validarlo, aplicar medidas anti-abuso y encolar el envío del correo en segundo plano sin bloquear la respuesta HTTP.
 
@@ -518,7 +540,7 @@ Recibir el payload del formulario (nombre, email, empresa, mensaje), validarlo, 
 
 ---
 
-## 7. Buenas prácticas usadas en el proyecto
+## 6. Buenas prácticas usadas en el proyecto
 
 - **Arquitectura en capas**: separación clara entre routers → services → repositories → infrastructure, preparada para una evolución hexagonal con puertos en `application/ports`.
 - **Configuración tipada**: uso de Pydantic Settings v2 para variables de entorno y validación.
@@ -526,11 +548,10 @@ Recibir el payload del formulario (nombre, email, empresa, mensaje), validarlo, 
 - **Seguridad**: JWT en cookies HttpOnly, CORS restrictivo en producción, cabeceras de seguridad, rate limiting, bloqueo por intentos de login fallidos.
 - **Calidad de código**: Black y Ruff; convenciones PEP; imports absolutos; docstrings al estilo NumPy donde aplica.
 - **Tests**: pytest con pytest-asyncio; tests unitarios e integración; recursos externos mockeados; cobertura mínima objetivo 80%.
-- **API**: recursos en plural, tags y descripciones en OpenAPI, respuestas de error estandarizadas con `HTTPException`.
 - **Cumplimiento**: consideraciones GDPR/LOPDGDD; cifrado en tránsito fuera del entorno local.
 
 
-### 8. Seguridad, CORS y cabeceras
+### 6.1 Seguridad, CORS y cabeceras
 
 - **CORS:**  
   La política de CORS se configura mediante variables de entorno.  
@@ -559,4 +580,3 @@ Recibir el payload del formulario (nombre, email, empresa, mensaje), validarlo, 
 - **Documentación de gobierno técnico:**  
   Las reglas de ingeniería, seguridad, testing y despliegue se definen en el archivo `AGENTS.md` situado en la raíz del repositorio.  
   Este documento actúa como referencia técnica para mantener coherencia en la evolución del backend.
-
