@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="FAS AI Agent Logo" width="120" />
+</p>
+
 # Atlas - Field Application Specialist AI Agent Backend
 
 ## 1. Descripción general del repositorio
