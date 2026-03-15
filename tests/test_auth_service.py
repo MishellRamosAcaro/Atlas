@@ -4,9 +4,7 @@ import pytest
 from fastapi import HTTPException
 from passlib.context import CryptContext
 
-from app.models.user import User
 from app.models.user_account_status import UserStatus
-from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_account_status_repository import UserAccountStatusRepository
 from app.services.auth_service import AuthService
@@ -16,8 +14,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 _REGISTER_PARAMS = {
     "country_code": "+34",
     "phone_number_normalized": "34600000000",
-    "accept_terms": True,
-    "accept_privacy": True,
 }
 
 
@@ -215,6 +211,7 @@ async def test_logout_local_invalidates_token(db_session):
 @pytest.mark.asyncio
 async def test_login_pending_verification_returns_403(db_session, monkeypatch):
     """Login with user in PENDING_VERIFICATION returns 403 with email_not_verified."""
+
     class MockEmailService:
         async def send_email(self, template_id: str, context: dict):
             pass
@@ -246,6 +243,7 @@ async def test_login_pending_verification_returns_403(db_session, monkeypatch):
 @pytest.mark.asyncio
 async def test_verify_email_success(db_session, monkeypatch):
     """Verify email with correct code sets user to ACTIVE."""
+
     class MockEmailService:
         async def send_email(self, template_id: str, context: dict):
             pass
@@ -269,9 +267,15 @@ async def test_verify_email_success(db_session, monkeypatch):
     status_record = await status_repo.get_by_user_id(user.id)
     code = "123456"
     from passlib.context import CryptContext
-    status_record.verification_code_hash = CryptContext(schemes=["bcrypt"], deprecated="auto").hash(code)
+
+    status_record.verification_code_hash = CryptContext(
+        schemes=["bcrypt"], deprecated="auto"
+    ).hash(code)
     from datetime import datetime, timedelta, timezone
-    status_record.verification_code_expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+
+    status_record.verification_code_expires_at = datetime.now(timezone.utc) + timedelta(
+        minutes=15
+    )
     await status_repo.update(status_record)
     await db_session.commit()
 

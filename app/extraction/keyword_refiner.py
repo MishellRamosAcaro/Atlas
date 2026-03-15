@@ -15,8 +15,6 @@ from typing import Any
 from app.prompts.enrichment_global_variables import BLACKLIST, HIERARCHY_KEYS
 
 
-
-
 def load_blacklist() -> set[str]:
     """Return global BLACKLIST as set."""
     return set[str](BLACKLIST)
@@ -110,7 +108,9 @@ def keyword_refiner_section(
     return [(s[0], round(s[1], 3)) for s in scores[:top_k]]
 
 
-def _section_kw_to_str(item: str | tuple[str, float] | list | dict[str, Any]) -> str | None:
+def _section_kw_to_str(
+    item: str | tuple[str, float] | list | dict[str, Any],
+) -> str | None:
     """Normalize section keyword item to string (for document refiner input)."""
     if isinstance(item, dict) and "term" in item:
         return str(item["term"]).strip() or None
@@ -140,7 +140,13 @@ def keyword_refiner_document(
     title = _normalize_lower(document_context.get("title") or "")
     intended = _normalize_lower(document_context.get("intended_use") or "")
     first_headings = document_context.get("first_headings") or []
-    title_use_text = title + " " + intended + " " + " ".join(_normalize_lower(h) for h in first_headings)
+    title_use_text = (
+        title
+        + " "
+        + intended
+        + " "
+        + " ".join(_normalize_lower(h) for h in first_headings)
+    )
 
     def appears_in_title_or_intended_use(term: str) -> float:
         return 1.0 if _term_in_text(_normalize_lower(term), title_use_text) > 0 else 0.0
@@ -174,7 +180,9 @@ def keyword_refiner_document(
 
     if isinstance(raw, dict):
         # Input is hierarchy: score per category
-        result_hierarchy: dict[str, list[tuple[str, float]]] = {k: [] for k in HIERARCHY_KEYS}
+        result_hierarchy: dict[str, list[tuple[str, float]]] = {
+            k: [] for k in HIERARCHY_KEYS
+        }
         for cat in HIERARCHY_KEYS:
             terms = raw.get(cat)
             if not isinstance(terms, list):
@@ -191,7 +199,9 @@ def keyword_refiner_document(
                 score = (tf_g * 0.5) + (n_sec * 0.3) + (in_title * 0.2)
                 scored.append((t_clean, score))
             scored.sort(key=lambda x: -x[1])
-            result_hierarchy[cat] = [(s[0], round(s[1], 3)) for s in scored[:top_per_category]]
+            result_hierarchy[cat] = [
+                (s[0], round(s[1], 3)) for s in scored[:top_per_category]
+            ]
         flat: list[tuple[str, float]] = []
         for v in result_hierarchy.values():
             flat.extend(v)
@@ -213,7 +223,9 @@ def keyword_refiner_document(
             score = (tf_g * 0.5) + (n_sec * 0.3) + (in_title * 0.2)
             scored.append((t_clean, score))
         scored.sort(key=lambda x: -x[1])
-        top_flat: list[tuple[str, float]] = [(s[0], round(s[1], 3)) for s in scored[: top_per_category * 2]]
+        top_flat: list[tuple[str, float]] = [
+            (s[0], round(s[1], 3)) for s in scored[: top_per_category * 2]
+        ]
         result_hierarchy = {k: [] for k in HIERARCHY_KEYS}
         result_hierarchy["core_workflow_terms"] = top_flat[:top_per_category]
         return {"keywords_hierarchy": result_hierarchy, "keywords": top_flat}

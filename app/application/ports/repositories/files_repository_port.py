@@ -21,32 +21,27 @@ class FilesRepositoryPort(ABC):
         content_type: str,
         status: str,
         scan_provider: str,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @abstractmethod
-    async def count_files_by_user(self, user_id: uuid.UUID) -> int:
-        ...
+    async def count_files_by_user(self, user_id: uuid.UUID) -> int: ...
 
     @abstractmethod
     async def list_files_by_user(
         self,
         user_id: uuid.UUID,
         include_pending: bool = True,
-    ) -> list[Any]:
-        ...
+    ) -> list[Any]: ...
 
     @abstractmethod
-    async def list_all_files_by_user(self, user_id: uuid.UUID) -> list[Any]:
-        ...
+    async def list_all_files_by_user(self, user_id: uuid.UUID) -> list[Any]: ...
 
     @abstractmethod
     async def get_file_by_id(
         self,
         file_id: uuid.UUID,
         user_id: uuid.UUID | None = None,
-    ) -> Any | None:
-        ...
+    ) -> Any | None: ...
 
     @abstractmethod
     async def update_file_status(
@@ -54,12 +49,12 @@ class FilesRepositoryPort(ABC):
         file_id: uuid.UUID,
         status: str,
         scan_result: str | None = None,
-    ) -> Any | None:
-        ...
+    ) -> Any | None: ...
 
     @abstractmethod
-    async def delete_file_record(self, file_id: uuid.UUID, user_id: uuid.UUID) -> bool:
-        ...
+    async def delete_file_record(
+        self, file_id: uuid.UUID, user_id: uuid.UUID
+    ) -> bool: ...
 
     @abstractmethod
     async def update_extracted_doc_path(
@@ -67,8 +62,7 @@ class FilesRepositoryPort(ABC):
         file_id: uuid.UUID,
         user_id: uuid.UUID,
         relative_path: str,
-    ) -> bool:
-        ...
+    ) -> bool: ...
 
     @abstractmethod
     async def update_filename(
@@ -76,6 +70,4 @@ class FilesRepositoryPort(ABC):
         file_id: uuid.UUID,
         user_id: uuid.UUID,
         filename: str,
-    ) -> bool:
-        ...
-
+    ) -> bool: ...

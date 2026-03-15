@@ -21,7 +21,9 @@ class UploadListItem(BaseModel):
     size: int = Field(..., description="Size in bytes")
     uploaded_at: datetime
     status: str = Field(..., description="CLEAN or PENDING_SCAN")
-    scan_result: str | None = Field(None, description="Result of the security scan for user confidence")
+    scan_result: str | None = Field(
+        None, description="Result of the security scan for user confidence"
+    )
 
 
 class UploadListResponse(BaseModel):

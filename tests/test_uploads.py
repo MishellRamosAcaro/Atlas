@@ -46,7 +46,9 @@ async def test_user_id(db_engine):
     )
     async with maker() as session:
         from app.models.user_account_status import UserStatus
-        from app.repositories.user_account_status_repository import UserAccountStatusRepository
+        from app.repositories.user_account_status_repository import (
+            UserAccountStatusRepository,
+        )
 
         repo = UserRepository(session)
         user = await repo.create(
@@ -238,7 +240,9 @@ async def test_delete_returns_404_if_not_owner(
     )
     async with maker() as session:
         user_repo = UserRepository(session)
-        from app.repositories.user_account_status_repository import UserAccountStatusRepository
+        from app.repositories.user_account_status_repository import (
+            UserAccountStatusRepository,
+        )
         from app.models.user_account_status import UserStatus
 
         other = await user_repo.create(

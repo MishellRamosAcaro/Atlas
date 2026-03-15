@@ -17,4 +17,3 @@ class LLMClientPort(ABC):
     async def agenerate(self, prompt: str) -> str:
         """Asynchronous generation."""
         ...
-

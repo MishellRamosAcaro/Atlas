@@ -1,7 +1,5 @@
 """Unit tests for keyword_refiner: blacklist, section and document refiner."""
 
-import pytest
-
 from app.extraction.keyword_refiner import (
     keyword_refiner_document,
     keyword_refiner_section,

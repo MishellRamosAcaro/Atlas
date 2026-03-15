@@ -53,7 +53,9 @@ async def register(
         country_code=body.country_code,
         phone_number_normalized=body.phone_number_normalized,
     )
-    return {"message": "Registration successful. Check your email for the verification code."}
+    return {
+        "message": "Registration successful. Check your email for the verification code."
+    }
 
 
 @router.post(
@@ -220,9 +222,11 @@ async def patch_me(
         first_name=body.first_name.strip() if body.first_name else None,
         last_name=body.last_name.strip() if body.last_name else None,
         country_code=body.country_code.strip() if body.country_code else None,
-        phone_number_normalized=body.phone_number_normalized.strip()
-        if body.phone_number_normalized
-        else None,
+        phone_number_normalized=(
+            body.phone_number_normalized.strip()
+            if body.phone_number_normalized
+            else None
+        ),
         is_active=body.is_active,
     )
     if email_changed:

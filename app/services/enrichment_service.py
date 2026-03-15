@@ -76,9 +76,7 @@ class EnrichmentService:
         self, relative_path: str, payload: dict[str, Any]
     ) -> None:
         """Persist full extraction JSON to storage."""
-        json_bytes = json.dumps(
-            payload, indent=2, ensure_ascii=False
-        ).encode("utf-8")
+        json_bytes = json.dumps(payload, indent=2, ensure_ascii=False).encode("utf-8")
         self._storage.save(json_bytes, relative_path)
 
     async def enrich_file(
@@ -122,6 +120,7 @@ class EnrichmentService:
 
         if llm_preset is None:
             from app.config import get_settings
+
             llm_preset = get_settings().llm_preset
 
         # create_llm_client expects a single preset str; config.llm_preset can be list[str]
@@ -139,7 +138,7 @@ class EnrichmentService:
         analyzer = DocumentSectionAnalyzer(
             preset=preset_str,
             config=config,
-            max_concurrent=max_concurrent ,
+            max_concurrent=max_concurrent,
         )
         try:
             enriched = await asyncio.to_thread(

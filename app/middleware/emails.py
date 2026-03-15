@@ -39,9 +39,8 @@ def get_template_id(template_id: str) -> EmailTemplateSpec:
 
 
 # Register built-in templates (contact form and verification code)
-from app.templates.emails.contact import CONTACT_SPEC
-from app.templates.emails.registry import VERIFICATION_CODE_SPEC
+from app.templates.emails.contact import CONTACT_SPEC  # noqa: E402
+from app.templates.emails.registry import VERIFICATION_CODE_SPEC  # noqa: E402
 
 add_email_template("contact", CONTACT_SPEC)
 add_email_template("verification_code", VERIFICATION_CODE_SPEC)
-

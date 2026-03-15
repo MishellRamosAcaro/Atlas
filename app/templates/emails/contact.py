@@ -113,6 +113,7 @@ Message:
 {message}
 """
 
+
 CONTACT_SPEC = EmailTemplateSpec(
     from_address="contact@email.fas-agent.com",
     to_address="rnd@fas-agent.com",

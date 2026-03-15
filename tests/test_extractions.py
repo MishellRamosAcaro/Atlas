@@ -95,6 +95,7 @@ def extraction_storage_tmp(monkeypatch):
     from app.infrastructure.storage import FileSystemStorage
 
     with tempfile.TemporaryDirectory() as tmp:
+
         def _make_storage(base_path=tmp):
             return FileSystemStorage(base_path)
 
@@ -108,6 +109,10 @@ def extraction_storage_tmp(monkeypatch):
         )
         monkeypatch.setattr(
             "app.services.uploads_service.get_storage",
+            lambda: _make_storage(),
+        )
+        monkeypatch.setattr(
+            "app.services.enrichment_service.get_storage",
             lambda: _make_storage(),
         )
         yield tmp
@@ -298,7 +303,9 @@ async def test_post_upload_extract_enrichment_200_returns_document_fields_only(
     assert "state" in doc
     assert "effective_date" in doc
     assert "owner_team" in doc
-    assert "sections" not in data
+    # API returns document + sections; sections may be empty for minimal PDFs
+    assert "sections" in data
+    assert isinstance(data["sections"], list)
 
 
 @pytest.mark.asyncio

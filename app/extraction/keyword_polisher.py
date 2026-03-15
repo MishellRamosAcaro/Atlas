@@ -19,7 +19,6 @@ Usage:
 from __future__ import annotations
 
 import re
-from pathlib import Path
 from typing import Any
 
 from app.extraction.keyword_refiner import load_blacklist
@@ -45,6 +44,7 @@ def _reduced_token_set(kw: str, blacklist: set[str]) -> frozenset[str]:
 
 # ── Convert between Atlas format and list format ───────────────────────────
 
+
 def _to_pair(item: dict[str, Any] | list | tuple) -> list:
     """Normalize to [term, score] from {"term", "score"} or [term, score]."""
     if isinstance(item, dict) and "term" in item:
@@ -62,6 +62,7 @@ def _to_object(pair: list) -> dict[str, Any]:
 
 
 # ── Tuple/list helpers ─────────────────────────────────────────────────────
+
 
 def _normalize_kw_pair(pair: list, strip_numbers: bool = False) -> list:
     """Normalize keyword string inside a [keyword, score] pair."""
@@ -84,6 +85,7 @@ def _dedup_kw_list(kw_list: list[list]) -> list[list]:
 
 
 # ── Blacklist duplicate detection (sections only) ───────────────────────────
+
 
 def _blacklist_dedup_section(kw_list: list[list], blacklist: set[str]) -> list[list]:
     """
@@ -110,6 +112,7 @@ def _blacklist_dedup_section(kw_list: list[list], blacklist: set[str]) -> list[l
 
 
 # ── Main polishing logic ───────────────────────────────────────────────────
+
 
 def _polish_document_keywords(doc: dict[str, Any]) -> dict[str, Any]:
     """Normalize document-level keywords and keywords_hierarchy (no number stripping)."""

@@ -21,8 +21,8 @@ os.environ.setdefault("LLM_TOP_P", "1.0")
 os.environ.setdefault("LLM_TIMEOUT", "120.0")
 os.environ.setdefault("LLM_MAX_RETRIES", "1")
 
-from app.infrastructure.base import Base
-from app.models import (  # noqa: F401 - register models for metadata
+from app.infrastructure.base import Base  # noqa: E402
+from app.models import (  # noqa: F401, E402 - register models for metadata
     File,
     LoginLockout,
     RefreshToken,

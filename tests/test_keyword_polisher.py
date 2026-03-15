@@ -1,7 +1,5 @@
 """Tests for keyword_polisher: normalization, dedup, blacklist dedup."""
 
-import pytest
-
 from app.extraction.keyword_polisher import polish_keywords
 
 
@@ -10,20 +8,27 @@ def test_polish_keywords_normalizes_lowercase():
     data = {
         "document": {
             "keywords": [{"term": "Foo Bar", "score": 0.5}],
-            "keywords_hierarchy": {"core_workflow_terms": [{"term": "Baz", "score": 0.3}]},
+            "keywords_hierarchy": {
+                "core_workflow_terms": [{"term": "Baz", "score": 0.3}]
+            },
         },
         "sections": [{"keywords": [{"term": "Section Term", "score": 0.2}]}],
     }
     result = polish_keywords(data)
     assert result["document"]["keywords"][0]["term"] == "foo bar"
-    assert result["document"]["keywords_hierarchy"]["core_workflow_terms"][0]["term"] == "baz"
+    assert (
+        result["document"]["keywords_hierarchy"]["core_workflow_terms"][0]["term"]
+        == "baz"
+    )
     assert result["sections"][0]["keywords"][0]["term"] == "section term"
 
 
 def test_polish_keywords_dedup():
     """Duplicate keyword strings are removed (first kept)."""
     data = {
-        "document": {"keywords": [{"term": "dup", "score": 0.5}, {"term": "DUP", "score": 0.3}]},
+        "document": {
+            "keywords": [{"term": "dup", "score": 0.5}, {"term": "DUP", "score": 0.3}]
+        },
         "sections": [],
     }
     result = polish_keywords(data)

@@ -52,7 +52,7 @@ class ExtractedDocumentPatchBody(BaseModel):
 
     source: dict | None = Field(
         None,
-        description="Partial source (e.g. { \"file_name\": \"new.pdf\" }). Merged with existing source.",
+        description='Partial source (e.g. { "file_name": "new.pdf" }). Merged with existing source.',
     )
     document_type: str | None = Field(None, description="Type of document.")
     technical_context: dict | None = Field(

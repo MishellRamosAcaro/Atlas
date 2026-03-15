@@ -130,7 +130,10 @@ class AuthService:
 
         await self._lockout_repo.clear(email)
         if not user.can_login:
-            if user.account_status and user.account_status.status == UserStatus.PENDING_VERIFICATION:
+            if (
+                user.account_status
+                and user.account_status.status == UserStatus.PENDING_VERIFICATION
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail={
@@ -191,7 +194,11 @@ class AuthService:
         user = await self._user_repo.get_by_id(token.user_id)
         if not user or not user.can_login:
             await self._refresh_repo.delete_by_id(token.id)
-            if user and user.account_status and user.account_status.status == UserStatus.PENDING_VERIFICATION:
+            if (
+                user
+                and user.account_status
+                and user.account_status.status == UserStatus.PENDING_VERIFICATION
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail={
@@ -269,7 +276,10 @@ class AuthService:
                 detail="Invalid or expired code",
             )
         now = datetime.now(timezone.utc)
-        if not status_record.verification_code_expires_at or status_record.verification_code_expires_at < now:
+        if (
+            not status_record.verification_code_expires_at
+            or status_record.verification_code_expires_at < now
+        ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid or expired code",
@@ -298,7 +308,9 @@ class AuthService:
         """
         key = self._normalize_email(email)
         user = await self._user_repo.get_by_email(key)
-        status_record = await self._status_repo.get_by_user_id(user.id) if user else None
+        status_record = (
+            await self._status_repo.get_by_user_id(user.id) if user else None
+        )
         if not user or not status_record:
             return 0
         if status_record.status == UserStatus.ACTIVE:
@@ -367,9 +379,9 @@ class AuthService:
         if country_code is not None:
             user.country_code = country_code.strip()
         if phone_number_normalized is not None:
-            user.phone_number_normalized = phone_number_normalized.strip().replace(
-                " ", ""
-            ).replace("-", "")
+            user.phone_number_normalized = (
+                phone_number_normalized.strip().replace(" ", "").replace("-", "")
+            )
         if is_active is not None and user.account_status:
             user.account_status.status = (
                 UserStatus.ACTIVE if is_active else UserStatus.DEACTIVATED

@@ -34,7 +34,9 @@ class UserRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_email_excluding(self, email: str, exclude_user_id: uuid.UUID) -> User | None:
+    async def get_by_email_excluding(
+        self, email: str, exclude_user_id: uuid.UUID
+    ) -> User | None:
         """Get user by email if they exist and are not the excluded user."""
         result = await self._session.execute(
             select(User).where(User.email == email).where(User.id != exclude_user_id)

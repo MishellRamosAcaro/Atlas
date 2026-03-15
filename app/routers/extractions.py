@@ -41,7 +41,9 @@ async def patch_extracted_document(
     else:
         document = await service.update_document_fields(file_id, user_id, updates)
     fields = ExtractedDocumentFields(
-        file_id=str(document["file_id"]) if document.get("file_id") is not None else None,
+        file_id=(
+            str(document["file_id"]) if document.get("file_id") is not None else None
+        ),
         source=document.get("source"),
         document_type=document.get("document_type"),
         technical_context=document.get("technical_context"),
@@ -70,7 +72,9 @@ async def get_extracted_document(
     service = ExtractionService(files_repo)
     document = await service.get_extracted_document(file_id, user_id)
     fields = ExtractedDocumentFields(
-        file_id=str(document["file_id"]) if document.get("file_id") is not None else None,
+        file_id=(
+            str(document["file_id"]) if document.get("file_id") is not None else None
+        ),
         source=document.get("source"),
         document_type=document.get("document_type"),
         technical_context=document.get("technical_context"),

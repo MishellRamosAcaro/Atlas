@@ -18,12 +18,7 @@ router = APIRouter()
 
 # Allowed global variable names (no endpoint lists these; only fetch by name).
 _ALLOWED_GLOBAL_VARS = frozenset(
-    {
-        "DOCUMENT_TYPE_VALUES",
-        "RISK_LEVEL_VALUES",
-        "AUDIENCE_VALUES",
-        "STATE_VALUES"
-    }
+    {"DOCUMENT_TYPE_VALUES", "RISK_LEVEL_VALUES", "AUDIENCE_VALUES", "STATE_VALUES"}
 )
 
 

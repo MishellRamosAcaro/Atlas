@@ -39,7 +39,7 @@ def extract_document(
     apply_block_cleaning: bool = False,
     include_keywords: bool = True,
 ) -> tuple[DocumentSchema, list[SectionSchema]]:
- 
+
     if not _is_pdf(content_type, file_name):
         raise ValueError(
             f"Unsupported type for extraction: {content_type} / {file_name}"
@@ -63,9 +63,7 @@ def extract_document(
     segments = segment_document(blocks)
     logger.info("Structural segmentation: %d segments", len(segments))
 
-    document, sections = chunk_to_sections(
-        segments, file_id=file_id, source=source
-    )
+    document, sections = chunk_to_sections(segments, file_id=file_id, source=source)
     logger.info("Semantic chunking: %d sections", len(sections))
 
     sections = [

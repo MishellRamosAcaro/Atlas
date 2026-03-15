@@ -49,9 +49,7 @@ class UserAccountStatusRepository:
         if not record.verification_sent_at:
             return True
         now = datetime.now(timezone.utc)
-        return now >= record.verification_sent_at + timedelta(
-            minutes=cooldown_minutes
-        )
+        return now >= record.verification_sent_at + timedelta(minutes=cooldown_minutes)
 
     def seconds_until_resend(
         self, record: UserAccountStatus, cooldown_minutes: int
@@ -60,9 +58,7 @@ class UserAccountStatusRepository:
         if not record.verification_sent_at:
             return 0
         now = datetime.now(timezone.utc)
-        allowed_at = record.verification_sent_at + timedelta(
-            minutes=cooldown_minutes
-        )
+        allowed_at = record.verification_sent_at + timedelta(minutes=cooldown_minutes)
         if now >= allowed_at:
             return 0
         return int((allowed_at - now).total_seconds())

@@ -63,7 +63,7 @@ class SectionSchema(BaseModel):
     """Section = atomic retrieval unit."""
 
     section_id: str
-    file_id: uuid.UUID 
+    file_id: uuid.UUID
     heading: str
     section_type: SectionType
     content: str

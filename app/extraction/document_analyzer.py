@@ -19,7 +19,9 @@ from app.extraction.keyword_refiner import (
     keyword_refiner_section,
 )
 from app.llm import LLMConfig, create_llm_client
-from app.prompts.enrichment_global_variables import BLACKLIST, DOCUMENT_TYPE_VALUES, RISK_LEVEL_VALUES, AUDIENCE_VALUES, STATE_VALUES
+from app.prompts.enrichment_global_variables import (
+    BLACKLIST,
+)
 from app.prompts.enrichment import (
     document_metadata_template,
     section_enrichment_template,
@@ -33,10 +35,12 @@ def _keywords_to_objects(keywords: list[Any]) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
     for item in keywords:
         if isinstance(item, dict) and "term" in item:
-            result.append({
-                "term": str(item["term"]),
-                "score": float(item.get("score", 0.0)),
-            })
+            result.append(
+                {
+                    "term": str(item["term"]),
+                    "score": float(item.get("score", 0.0)),
+                }
+            )
         elif isinstance(item, (list, tuple)) and len(item) >= 2:
             result.append({"term": str(item[0]), "score": float(item[1])})
         elif isinstance(item, (list, tuple)) and len(item) >= 1:
@@ -172,13 +176,9 @@ class DocumentSectionAnalyzer:
     ) -> dict[str, Any]:
         """Fill document-level metadata via LLM and keyword_refiner_document."""
         try:
-            section_keywords = [
-                s.get("keywords") or [] for s in enriched_sections
-            ]
+            section_keywords = [s.get("keywords") or [] for s in enriched_sections]
             source = document.get("source") or {}
-            section_headings = [
-                s.get("heading") or "" for s in enriched_sections[:10]
-            ]
+            section_headings = [s.get("heading") or "" for s in enriched_sections[:10]]
             document_context = {
                 "source": source,
                 "title": source.get("file_name", ""),
@@ -189,12 +189,9 @@ class DocumentSectionAnalyzer:
                 h = (s.get("heading") or "").lower()
                 if (
                     "intended use" in h
-                    or "intended use"
-                    in (s.get("content") or "")[:500].lower()
+                    or "intended use" in (s.get("content") or "")[:500].lower()
                 ):
-                    document_context["intended_use"] = (
-                        s.get("content") or ""
-                    )[:2000]
+                    document_context["intended_use"] = (s.get("content") or "")[:2000]
                     break
 
             def _kw_strings(kw_list: list) -> str:
@@ -211,9 +208,7 @@ class DocumentSectionAnalyzer:
                 return ", ".join(terms)
 
             section_keywords_text = (
-                "\n".join(
-                    f"- {_kw_strings(kw)}" for kw in section_keywords if kw
-                )
+                "\n".join(f"- {_kw_strings(kw)}" for kw in section_keywords if kw)
                 or "(none)"
             )
             doc_ctx_str = json.dumps(
@@ -225,9 +220,7 @@ class DocumentSectionAnalyzer:
                 indent=2,
                 ensure_ascii=False,
             )
-            prompt = self._document_template.format(
-                document_context=doc_ctx_str
-            )
+            prompt = self._document_template.format(document_context=doc_ctx_str)
             response = self._client.generate(prompt)
             parsed = _parse_json_from_response(response)
             if not parsed or not isinstance(parsed, dict):
@@ -256,11 +249,7 @@ class DocumentSectionAnalyzer:
             doc_raw = (
                 raw_hierarchy
                 if isinstance(raw_hierarchy, dict)
-                else (
-                    raw_keywords
-                    if isinstance(raw_keywords, list)
-                    else []
-                )
+                else (raw_keywords if isinstance(raw_keywords, list) else [])
             )
             refined = keyword_refiner_document(
                 section_keywords_per_section=section_keywords,
@@ -270,18 +259,10 @@ class DocumentSectionAnalyzer:
                 top_per_category=15,
             )
             out["keywords_hierarchy"] = refined.get("keywords_hierarchy", {})
-            out["keywords"] = _keywords_to_objects(
-                refined.get("keywords", [])
-            )
-            if (
-                not out["keywords"]
-                and isinstance(raw_keywords, list)
-                and raw_keywords
-            ):
+            out["keywords"] = _keywords_to_objects(refined.get("keywords", []))
+            if not out["keywords"] and isinstance(raw_keywords, list) and raw_keywords:
                 out["keywords"] = [
-                    {"term": str(k).strip(), "score": 0.0}
-                    for k in raw_keywords
-                    if k
+                    {"term": str(k).strip(), "score": 0.0} for k in raw_keywords if k
                 ]
             return out
         except Exception:
@@ -298,9 +279,7 @@ class DocumentSectionAnalyzer:
             return input_json
 
         try:
-            enriched_sections = asyncio.run(
-                self._process_all_sections(sections)
-            )
+            enriched_sections = asyncio.run(self._process_all_sections(sections))
         except Exception as e:
             raise ValueError(
                 f"Document analysis failed at section enrichment: {e}"

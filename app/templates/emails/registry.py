@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.middleware.emails import EmailContext, EmailTemplateSpec
+
 # ---------------------------------------------------------------------------
 # Verification code (registration / confirm user)
 # ---------------------------------------------------------------------------

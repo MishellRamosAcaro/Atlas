@@ -9,7 +9,6 @@ from typing import Any
 
 from app.llm.config import LLMConfig
 
-
 LLM_PRESETS = {
     "gemini-flash": "gemini-2.0-flash",
 }

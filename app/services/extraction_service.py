@@ -80,7 +80,7 @@ class ExtractionService:
             if file_record.content_type is None:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Content type is required."
+                    detail="Content type is required.",
                 )
             document, sections = await asyncio.to_thread(
                 extract_document,
@@ -247,7 +247,9 @@ class ExtractionService:
         if isinstance(source, dict) and "file_name" in source:
             new_file_name = source.get("file_name")
             if isinstance(new_file_name, str) and new_file_name.strip():
-                await self._repo.update_filename(file_id, user_id, new_file_name.strip())
+                await self._repo.update_filename(
+                    file_id, user_id, new_file_name.strip()
+                )
 
         json_bytes = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
         self._storage.save(json_bytes, file_record.extracted_doc_path)

@@ -85,7 +85,9 @@ class UserAccountStatus(Base):
 
     def __repr__(self) -> str:
         """String representation."""
-        return f"<UserAccountStatus(user_id={self.user_id!r}, status={self.status.value})>"
+        return (
+            f"<UserAccountStatus(user_id={self.user_id!r}, status={self.status.value})>"
+        )
 
 
 if TYPE_CHECKING:

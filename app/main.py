@@ -11,17 +11,24 @@ from slowapi.errors import RateLimitExceeded
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from app.config import get_settings
-from app.infrastructure.database import engine
-from app.infrastructure.base import Base
-from app.models import (  # noqa: F401 - register models
+from app.config import get_settings  # noqa: E402
+from app.infrastructure.database import engine  # noqa: E402
+from app.infrastructure.base import Base  # noqa: E402
+from app.models import (  # noqa: F401, E402 - register models
     File,
     LoginLockout,
     RefreshToken,
     User,
     UserAccountStatus,
 )
-from app.routers import auth, contact, enrichments, extractions, upload_extract_enrichment, uploads
+from app.routers import (  # noqa: E402
+    auth,
+    contact,
+    enrichments,
+    extractions,
+    upload_extract_enrichment,
+    uploads,
+)
 
 settings = get_settings()
 
@@ -56,13 +63,13 @@ app.add_middleware(
 )
 
 # Rate limiting (SlowAPI) - per IP for MVP
-from app.limiter import limiter
+from app.limiter import limiter  # noqa: E402
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Security headers
-from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware  # noqa: E402
 
 app.add_middleware(SecurityHeadersMiddleware)
 

@@ -168,7 +168,11 @@ async def test_post_enrichments_200_returns_document_and_sections(
     extraction_payload = {
         "document": {
             "file_id": str(file_id),
-            "source": {"file_name": "sample.pdf", "file_hash": "h", "upload_date": "2024-01-01"},
+            "source": {
+                "file_name": "sample.pdf",
+                "file_hash": "h",
+                "upload_date": "2024-01-01",
+            },
         },
         "sections": [
             {
@@ -239,7 +243,9 @@ async def test_post_enrichments_200_returns_document_and_sections(
         json={"llm_preset": "gemini-flash"},
     )
 
-    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+    assert (
+        response.status_code == 200
+    ), f"Expected 200, got {response.status_code}: {response.text}"
     data = response.json()
     assert "document" in data
     assert "sections" in data

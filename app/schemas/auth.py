@@ -67,7 +67,13 @@ class VerifyEmailRequest(BaseModel):
     """Request for POST /auth/verify-email."""
 
     email: EmailStr = Field(..., description="User email")
-    code: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$", description="6-digit verification code")
+    code: str = Field(
+        ...,
+        min_length=6,
+        max_length=6,
+        pattern=r"^\d{6}$",
+        description="6-digit verification code",
+    )
 
 
 class ResendVerificationRequest(BaseModel):
@@ -88,8 +94,12 @@ class PatchMeRequest(BaseModel):
     """Request for PATCH /auth/me (all fields optional; at least one required)."""
 
     email: EmailStr | None = Field(None, description="User email")
-    first_name: str | None = Field(None, min_length=2, max_length=100, description="First name")
-    last_name: str | None = Field(None, min_length=2, max_length=100, description="Last name")
+    first_name: str | None = Field(
+        None, min_length=2, max_length=100, description="First name"
+    )
+    last_name: str | None = Field(
+        None, min_length=2, max_length=100, description="Last name"
+    )
     country_code: str | None = Field(None, description="Phone country code (e.g. +34)")
     phone_number_normalized: str | None = Field(
         None,
@@ -141,7 +151,9 @@ class PatchPasswordRequest(BaseModel):
 class DeleteAccountRequest(BaseModel):
     """Request for DELETE /auth/me (password confirmation)."""
 
-    password: str = Field(..., description="Current password to confirm account deletion")
+    password: str = Field(
+        ..., description="Current password to confirm account deletion"
+    )
 
 
 class MeResponse(BaseModel):

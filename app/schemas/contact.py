@@ -10,7 +10,10 @@ class ContactRequest(BaseModel):
     email: EmailStr = Field(..., description="Contact email")
     company: str = Field(..., min_length=2, max_length=100, description="Company name")
     message: str = Field(..., min_length=10, max_length=1000, description="Message")
-    honeypot: str = Field(default="", description="Must be empty; if filled, backend returns 400 (anti-spam)")
+    honeypot: str = Field(
+        default="",
+        description="Must be empty; if filled, backend returns 400 (anti-spam)",
+    )
 
 
 class ContactResponse(BaseModel):

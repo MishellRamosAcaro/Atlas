@@ -125,7 +125,7 @@ El archivo `.env.example` contiene la mayoría de variables preconfiguradas para
      Proveedores soportados: Google (Gemini), Anthropics (Claude), DeepSeek u OpenAI.  
      No es necesario configurar todas las claves, solo la correspondiente al preset seleccionado.
 
-> **Nota:** No es necesario tener un frontend en ejecución, ya que el backend funciona de forma independiente y puede utilizarse directamente mediante peticiones HTTP a la API desde herramientas como Postman o desde la documentación interactiva generada automáticamente (Swagger / OpenAPI).
+> **Nota:** No es necesario tener un frontend en ejecución, ya que el backend funciona de forma independiente y puede utilizarse directsmente mediante peticiones HTTP a la API desde herramientas como Postman o desde la documentación interactiva generada automáticamente (Swagger / OpenAPI).
 
 #### 3.1.2 Creación del entorno virtual e instalación de dependencias
 
@@ -148,7 +148,7 @@ Una vez instaladas las dependencias y activado el entorno virtual, se puede inic
 Ejecutar el siguiente comando desde el directorio raíz del proyecto:
 
 ```bash
-(.venv) python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+(.venv)$  python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 El backend se ejecuta indicando como punto de entrada `app.main:app`, donde `app` es la instancia de FastAPI definida en el archivo `main.py`. El parámetro `--reload` habilita el reinicio automático del servidor cuando se detectan cambios en el código, lo que resulta útil durante el desarrollo.La opción `--host 0.0.0.0` permite que el servidor sea accesible desde cualquier interfaz de red, y `--port 8000` define el puerto en el que se expondrá la API.
 
@@ -158,6 +158,64 @@ Una vez iniciado el servidor, la API estará disponible en:
     - Documentación ReDoc → http://localhost:8000/redoc
 
 > **Nota:** La documentación interactiva solo estará disponible cuando la variable de entorno ENV esté configurada como dev, ya que en entornos de producción estas rutas pueden deshabilitarse por motivos de seguridad.
+
+
+#### 3.1.4 Ejecutar tests
+
+Para ejecutar los tests es necesario disponer de una base de datos independiente para testing.  
+El proyecto está configurado para usar una base de datos llamada `atlas_test`, definida en la variable de entorno `DATABASE_URL_TEST`.
+
+Si es la primera vez que se ejecutan los tests, se debe crear la base de datos manualmente en PostgreSQL.
+
+Ejecutar el siguiente comando desde una terminal con acceso a `psql`:
+
+```bash
+psql -U postgres -c "CREATE DATABASE atlas_test;"
+
+Salida esperada:
+
+CREATE DATABASE
+```
+
+Una vez creada la base de datos, se pueden ejecutar los tests:
+
+python -m pytest tests/ -v
+
+Este comando ejecuta todos los tests del directorio tests/ mostrando información detallada.
+
+#### 3.1.5 Formateo de código con Black
+
+Black se utiliza para mantener un formato de código consistente en todo el proyecto.
+El formateo no modifica la lógica del programa, únicamente el estilo. Se ejecuta desde la raiz del proyecto:
+
+```bash
+(.venv)$  black .
+
+reformatted app/application/use_cases/__init__.py
+reformatted app/application/__init__.py
+...
+All done! 47 files reformatted, 48 files left unchanged.
+
+```
+
+#### 3.1.6 Análisis estático con Ruff
+
+Ruff se utiliza como linter principal para detectar errores, imports no usados y problemas de estilo antes de ejecutar el código.
+
+```bash
+(.venv)$  ruff check .
+
+F401 `DOCUMENT_TYPE_VALUES` imported but unused
+--> app/extraction/document_analyzer.py:24:5
+
+Found 26 errors.
+14 fixable with the --fix option.
+```
+
+Para corregir automáticamente los errores que lo permitan:
+```bash
+(.venv)$  ruff check . --fix
+```
 
 ## 4. Estructura del proyecto
 
@@ -209,7 +267,6 @@ Atlas/
 │   ├── prompts/                 # Plantillas de prompts para enriquecimiento
 │   └── templates/               # Plantillas de email (contacto, registro, etc.)
 ├── tests/                       # Tests unitarios e integración (pytest)
-├── data/                        # Datos locales (p. ej. staging)
 ├── requirements.txt
 ├── .env.example
 └── README.md
@@ -227,41 +284,237 @@ Atlas/
 
 ## 5. Funcionalidades principales
 
-1. **Autenticación y usuarios**  
-   Registro con email y contraseña, verificación por código de 6 dígitos, login con JWT en cookies HttpOnly, refresh de tokens, límite de sesiones, bloqueo por intentos fallidos, actualización de perfil y contraseña, borrado de cuenta.
+En esta sección se describen las capacidades del backend desde un punto de vista técnico, junto con los endpoints asociados.  
+Se ha decidido vincular cada caso de uso con su endpoint correspondiente, ya que estos definen de forma exacta las operaciones que puede realizar un cliente.
 
-2. **Subida y gestión de archivos**  
-   Subida de PDFs con validación de tipo y tamaño, cuota por usuario (ej. 5 archivos), almacenamiento en disco (dev) o GCS (prod), escaneo antivirus en producción, listado, metadatos, descarga (solo archivos CLEAN) y borrado.
+Cada endpoint se ha asociado a su caso de uso completo, ya que representa la unidad funcional desde el inicio hasta el fin de la operación. De esta forma, el path define de manera explícita el flujo que sigue el cliente para realizar una acción, lo que facilita la comprensión del sistema, mejora la mantenibilidad y asegura la coherencia entre la documentación, la API expuesta y el comportamiento real del backend.
 
-3. **Extracción de documentos**  
-   Pipeline que a partir del PDF obtiene bloques de layout, los segmenta, genera secciones semánticas y keywords, y persiste el resultado (documento + secciones) en almacenamiento.
+Se utiliza la técnica Given/When/Then para definir de forma estructurada las funcionalidades principales y los requisitos del sistema.
 
-4. **Enriquecimiento con LLM**  
-   Toma el documento extraído y, usando el cliente LLM configurado, genera metadatos a nivel documento (tipo, contexto técnico, riesgo, audiencia) y por sección (resumen, keywords). Resultado persistido y expuesto por API.
+### 5.1 Autenticación y Sesiones
 
-5. **Flujo upload-extract-enrichment**  
-   Un solo endpoint que sube el archivo, ejecuta la extracción y el enriquecimiento y devuelve el documento enriquecido y las secciones (usado por el frontend para “analizar archivos”).
+El backend es la única fuente de verdad para identidad y sesión. Gestiona el proceso de autenticación (registro, verificación, login, refresh de tokens) y aplica políticas de seguridad como límite de sesiones, bloqueo por intentos fallidos y almacenamiento seguro de credenciales.
 
-6. **Formulario de contacto**  
-   POST con validación, honeypot anti-spam y rate limiting; el envío del email se hace en background vía Resend.
+**Casos de uso y endpoints expuestos por la API**
 
-7. **Seguridad y calidad**  
-   CORS según entorno, cabeceras de seguridad (HSTS, X-Content-Type-Options, etc.), rate limiting por IP, cookies seguras y configuración lista para TLS en producción.
+- Registro de usuario  
+  Endpoint: POST /auth/register  
+  - Given: El usuario no tiene una cuenta registrada.
+  - When: El usuario envía su email y contraseña al endpoint de registro.
+  - Then: El backend crea el usuario en estado pendiente y envía un código de verificación al correo indicado.
+
+- Verificación de email  
+  Endpoint: POST /auth/verify-email  
+  - Given: El usuario ha recibido un código de verificación por email.
+  - When: El usuario envía el código al endpoint de verificación.
+  - Then: El backend valida el código y activa la cuenta si es correcto.2
+
+- Solicitud de nuevo código de verificación  
+  Endpoint: POST /auth/resend-verification-code  
+  - Given: El usuario tiene una cuenta pendiente de verificación.
+  - When: El usuario solicita un nuevo código.
+  - Then: El backend envía un nuevo código de verificación aplicando rate limiting por dirección de email.
+
+- Login con credenciales  
+  Endpoint: POST /auth/token (grant_type=password)  
+  - Given: El usuario tiene una cuenta válida y verificada.
+  - When: El usuario envía email y contraseña.
+  - Then: El backend genera tokens JWT (access y refresh) y los devuelve en cookies HttpOnly.
+
+- Renovación de sesión  
+  Endpoint: POST /auth/token (grant_type=refresh_token o cookie)  
+  - Given: El usuario tiene un refresh token válido almacenado en cookie HttpOnly.
+  - When: El cliente solicita renovar la sesión.
+  - Then: El backend genera un nuevo access token si la sesión sigue siendo válida y respeta el límite de sesiones activas.
+
+- Cierre de sesión  
+  Endpoint: POST /auth/logout  
+  - Given: El usuario tiene una sesión activa.
+  - When: El usuario solicita cerrar sesión.
+  - Then: El backend invalida la sesión actual o todas las sesiones activas del usuario.
+
 
 ---
 
-## 6. Scripts disponibles
+### 5.2 Gestión de perfil y cuenta de usuario
+
+El backend gestiona los datos persistentes asociados al usuario autenticado y garantiza que solo el propietario de la cuenta pueda consultar o modificar su información.
+
+**Casos de uso y endpoints expuestos por la API**
+
+- Consulta del perfil del usuario autenticado  
+  Endpoint: GET /auth/me  
+  - Given: El usuario tiene una sesión válida.
+  - When: El cliente solicita la información del perfil.
+  - Then: El backend devuelve los datos del usuario autenticado.
+
+- Actualización de datos de perfil  
+  Endpoint: PATCH /auth/me  
+  - Given: El usuario está autenticado.
+  - When: El usuario envía nuevos datos de perfil (nombre, apellido,correo).
+  - Then: El backend valida la información y actualiza los datos almacenados.En el caso del correo vuelve a verificar que es un correo válido. 
+
+- Cambio de contraseña  
+  Endpoint: PATCH /auth/me/password  
+  - Given: El usuario está autenticado y conoce su contraseña actual.
+  - When: El usuario envía la contraseña actual y la nueva contraseña.
+  - Then: El backend valida la contraseña, la actualiza y cierra todas las sesiones activas.
+
+- Desactivación de la cuenta  
+  Endpoint: POST /auth/me/deactivate  
+  - Given: El usuario tiene una sesión activa.
+  - When: El usuario solicita desactivar su cuenta.
+  - Then: El backend desactiva la cuenta y cierra la sesión en todos los dispositivos.
+
+- Borrado definitivo de la cuenta  
+  Endpoint: DELETE /auth/me  
+  - Given: El usuario está autenticado.
+  - When: El usuario solicita eliminar su cuenta y confirma con la contraseña.
+  - Then: El backend elimina la cuenta y todos los datos asociados.
 
 
+### 5.2 Subida y gestión de archivos
 
-| Comando | Descripción |
-|---------|-------------|
-| `uvicorn app.main:app --reload` | Arranca la API en modo desarrollo con recarga |
-| `pytest tests/ -v` | Ejecuta todos los tests (usar `.venv` o `python -m pytest`) |
-| `black .` | Formatea el código (Black) |
-| `ruff check .` | Linting (Ruff) |
+Validar tipo y tamaño de archivo, aplicar cuota por usuario, persistir el binario en almacenamiento (local o cloud), ejecutar escaneo antivirus en producción y mantener metadatos y estado del archivo en PostgreSQL.
 
-En desarrollo local se debe usar siempre el entorno virtual (por ejemplo `source .venv/bin/activate` o `.venv/bin/python -m pytest`).
+**Casos de uso y endpoints expuestos por la API**
+
+- Subida de archivo  
+  Endpoint: POST /files  
+  - Given: El usuario está autenticado.
+  - When: El usuario envía un archivo en formato multipart.
+  - Then: El backend valida el formato (PDF), comprueba el tamaño máximo permitido y la cuota de archivos por usuario, y almacena el archivo si cumple las restricciones.
+
+- Listado de archivos del usuario  
+  Endpoint: GET /files  
+  - Given: El usuario tiene una sesión válida.
+  - When: El cliente solicita el listado de archivos.
+  - Then: El backend devuelve los archivos asociados al usuario con su estado (CLEAN, PENDING_SCAN, INFECTED) y sus metadatos (nombre, tamaño, fecha).
+
+- Descarga de archivo  
+  Endpoint: GET /files/{file_id}/download  
+  - Given: El usuario es propietario del archivo.
+  - When: El usuario solicita descargar el archivo.
+  - Then: El backend permite la descarga solo si el estado del archivo es CLEAN; los archivos en cuarentena o infectados no pueden descargarse 
+
+- Borrado de archivo  
+  Endpoint: DELETE /files/{file_id}  
+  - Given: El usuario es propietario del archivo.
+  - When: El usuario solicita eliminar el archivo.
+  - Then: El backend elimina el registro en la base de datos y el contenido almacenado.
+
+
+- **Funcionalidades futuras**
+  - Almacenamiento: en desarrollo se usa un directorio local configurado por variable de entorno; en el futuro se pretende usar Google Cloud Storage (GCS), configurado mediante bucket y credenciales.
+  - Antivirus: en el futuro se pretende ejecutar un escáner sobre el archivo subido; si el resultado es infectado, el archivo y el registro se eliminan y se devuelve error al cliente. Se ha dejado preprarada la estructura para poder realizarlo. Ahora todos los archivos tienen el estado CLEAN. 
+
+### 5.3 Extracción de documentos
+
+Ejecutar la extracción del contenido del documento (actualmente PDF) para generar una representación estructurada persistente, utilizada posteriormente como entrada del proceso de enriquecimiento mediante LLM.  
+La extracción previa permite reducir el número de tokens consumidos durante el enriquecimiento, evitando enviar el documento completo al modelo.
+
+Pipeline interno:
+- Extracción de layout mediante pdfplumber / pypdf.
+- Segmentación estructural del documento.
+- Chunking semántico por secciones.
+- Extracción de keywords por sección.
+
+Resultado:
+Se produce un JSON estructurado con el documento y sus secciones (heading, content, keywords), que se almacena en el sistema de almacenamiento y se referencia desde el registro del archivo en la base de datos.
+
+**Casos de uso y endpoints expuestos por la API**
+
+- Ejecución de extracción sobre un archivo subido  
+  Endpoint: POST /extractions/{file_id}  
+  - Given: El usuario es propietario del archivo y el archivo está en estado CLEAN.
+  - When: El cliente solicita ejecutar la extracción para ese archivo.
+  - Then: El backend ejecuta el pipeline de extracción, persiste el JSON (documento + secciones) en almacenamiento, actualiza la referencia en BD y devuelve el resultado.
+
+- Consulta del documento extraído  
+  Endpoint: GET /extractions/{file_id}/document  
+  - Given: El usuario es propietario del archivo y existe extracción previa.
+  - When: El cliente solicita los metadatos a nivel documento (source, document_type, technical_context, risk_level, audience, etc.).
+  - Then: El backend lee el JSON desde almacenamiento y devuelve la sección document.
+
+- Actualización de campos del documento extraído  
+  Endpoint: PATCH /extractions/{file_id}/document  
+  - Given: El usuario es propietario del archivo y existe extracción.
+  - When: El usuario envía campos a actualizar (source, document_type, technical_context, risk_level, audience, state, effective_date, owner_team).
+  - Then: El backend actualiza el JSON en almacenamiento y, si se modifica source.file_name, sincroniza el filename en la tabla de archivos.
+
+### 5.4 Enriquecimiento con LLM
+
+Ejecutar el proceso de enriquecimiento sobre un documento previamente extraído, invocando al proveedor de LLM configurado para generar metadatos a nivel de documento y de sección, y persistiendo el resultado enriquecido.  
+
+Pipeline interno:
+- Lectura del JSON estructurado almacenado (documento + secciones).
+- Selección del proveedor LLM según el preset configurado en variables de entorno.
+- Generación de metadatos a nivel de documento (tipo, contexto técnico, nivel de riesgo, audiencia).
+- Procesamiento por secciones en paralelo con límite de concurrencia configurable.
+- Generación de resumen y refinamiento de keywords por sección; asignación de score a cada keyword en función del documento (frecuencia en la sección, aparición en el encabezado, peso técnico a nivel de sección; frecuencia global, número de secciones donde aparece y aparición en título o intended use a nivel de documento).
+- Invocación del cliente LLM unificado (Google Gemini, Anthropic Claude, DeepSeek, OpenAI).
+- Ejecución de llamadas en thread pool con política de reintentos ante errores.
+- Validación del resultado antes de persistencia.
+
+Resultado:
+Se genera un JSON enriquecido que contiene metadatos a nivel de documento y por sección. Las keywords se devuelven con un score numérico: a nivel de sección, cada keyword tiene score según frecuencia en el contenido (TF local), aparición en el encabezado de la sección y peso por término técnico; a nivel de documento, el score combina frecuencia global en el texto, número de secciones donde aparece el término y aparición en título o sección de intended use. Las keywords se exponen en formato `{"term": string, "score": float}`; a nivel documento además se ofrece una jerarquía por categoría (keywords_hierarchy). El resultado se almacena en el sistema de almacenamiento y queda referenciado en el registro del archivo en la base de datos.
+
+
+**Casos de uso y endpoints expuestos por la API**
+
+- Enriquecimiento con LLM de un documento extraído  
+  Endpoint: POST /enrichments/{file_id}  
+  - Given: El usuario es propietario del archivo y existe extracción previa.
+  - When: El cliente solicita enriquecer el documento.
+  - Then: El backend invoca al LLM configurado, genera metadatos a nivel documento y por sección, asigna un score a cada keyword (por sección: TF local, aparición en encabezado y peso técnico; por documento: TF global, secciones donde aparece y aparición en título/intended use), persiste el JSON enriquecido y devuelve documento (incl. keywords y keywords_hierarchy con scores) y secciones (incl. keywords con score por término).
+
+- Consulta de variable global de enriquecimiento  
+  Endpoint: GET /enrichments/export_global_variable/{variable_name}  
+  - Given: El usuario está autenticado y el nombre de variable está permitido (DOCUMENT_TYPE_VALUES, RISK_LEVEL_VALUES, AUDIENCE_VALUES, STATE_VALUES).
+  - When: El cliente solicita el valor de una variable global.
+  - Then: El backend devuelve el valor; error si el nombre no está permitido.
+
+### 5.5 Flujo único: subida, extracción y enriquecimiento
+
+Ofrecer un único endpoint que orqueste en secuencia:  
+(1) subida y validación del archivo,  
+(2) ejecución del pipeline de extracción,  
+(3) enriquecimiento mediante LLM,  
+permitiendo que el frontend analice un archivo completo en una sola petición.
+
+Pipeline interno:
+- Recepción del archivo.
+- Validación de formato, tamaño máximo y cuota de archivos por usuario.
+- Almacenamiento del archivo y creación del registro en base de datos.
+- Ejecución del pipeline de extracción estructural.
+- Generación del JSON con documento y secciones.
+- Ejecución del pipeline de enriquecimiento utilizando el proveedor LLM configurado.
+- Persistencia del resultado enriquecido en almacenamiento.
+- Actualización del estado del archivo y de los metadatos asociados.
+
+Resultado:
+El archivo queda almacenado junto con su representación estructurada y el resultado enriquecido.  
+El registro del archivo en la base de datos referencia tanto el contenido original como el JSON extraído y el JSON enriquecido, permitiendo su consulta posterior sin repetir el procesamiento.
+
+**Casos de uso y endpoints expuestos por la API**
+
+- Subida, extracción y enriquecimiento en una sola petición  
+  Endpoint: POST /upload-extract-enrichment  
+  - Given: El usuario está autenticado.
+  - When: El usuario envía un archivo en formato multipart (PDF).
+  - Then: El backend sube el archivo, ejecuta la extracción y el enriquecimiento, y devuelve el documento enriquecido y las secciones (document_type, technical_context, risk_level, audience, section_summary, keywords). Rate limiting aplicado (p. ej. 10/minuto por IP).
+
+### 5.6 Formulario de contacto
+
+Recibir el payload del formulario (nombre, email, empresa, mensaje), validarlo, aplicar medidas anti-abuso y encolar el envío del correo en segundo plano sin bloquear la respuesta HTTP.
+
+**Casos de uso y endpoints expuestos por la API**
+
+- Envío del formulario de contacto  
+  Endpoint: POST /contact  
+  - Given: El cliente tiene los datos del formulario (nombre, email, empresa, mensaje) y el honeypot no está rellenado.
+  - When: El cliente envía un POST con el body validado.
+  - Then: El backend responde de forma inmediata con éxito o error de validación; el envío del email se encola en background (BackgroundTasks) vía Resend.
 
 ---
 
@@ -276,10 +529,34 @@ En desarrollo local se debe usar siempre el entorno virtual (por ejemplo `source
 - **API**: recursos en plural, tags y descripciones en OpenAPI, respuestas de error estandarizadas con `HTTPException`.
 - **Cumplimiento**: consideraciones GDPR/LOPDGDD; cifrado en tránsito fuera del entorno local.
 
----
 
-## 8. Autor e información adicional
+### 8. Seguridad, CORS y cabeceras
 
-- **Servicio**: Atlas  
-- **Documentación de gobierno técnico**: ver `AGENTS.MD` en la raíz del repositorio para reglas de ingeniería, seguridad, testing y despliegue.  
-- **Producción**: pensado para ejecución en Docker (imagen base recomendada `python:alpine`) y despliegue en **Google Cloud Run**, con secretos en Google Cloud Secret Manager.
+- **CORS:**  
+  La política de CORS se configura mediante variables de entorno.  
+  En entorno de desarrollo se permite el acceso desde cualquier origen para facilitar la integración, mientras que en producción se restringe a una lista explícita de orígenes autorizados (por ejemplo, el dominio del frontend).  
+  El envío de credenciales mediante cookies solo se habilita para los dominios permitidos.
+
+- **Cabeceras de seguridad:**  
+  Se aplica un middleware que añade cabeceras HTTP de seguridad en todas las respuestas, incluyendo  
+  `X-Content-Type-Options: nosniff`,  
+  `X-Frame-Options: DENY` y  
+  `Referrer-Policy: strict-origin-when-cross-origin`.  
+  En entornos de producción puede habilitarse HSTS para forzar el uso de HTTPS.
+
+- **Rate limiting:**  
+  Se aplica limitación de peticiones por IP utilizando SlowAPI.  
+  Los límites se definen por endpoint (registro, login, contacto, subida de archivos, flujo combinado, etc.) con el objetivo de mitigar abuso, ataques de fuerza bruta y uso excesivo de recursos.
+
+- **Cookies:**  
+  Los atributos de las cookies (Domain, Secure y SameSite) se configuran por entorno.  
+  En producción se recomienda `Secure=true` y `SameSite=Strict` o `Lax`, siempre bajo HTTPS, para evitar exposición de sesión en contextos inseguros.
+
+- **Documentación OpenAPI:**  
+  En modo desarrollo se exponen los endpoints `/docs` y `/redoc` para facilitar pruebas e integración.  
+  En producción pueden deshabilitarse mediante variable de entorno para evitar exponer la estructura interna de la API.
+
+- **Documentación de gobierno técnico:**  
+  Las reglas de ingeniería, seguridad, testing y despliegue se definen en el archivo `AGENTS.md` situado en la raíz del repositorio.  
+  Este documento actúa como referencia técnica para mantener coherencia en la evolución del backend.
+
