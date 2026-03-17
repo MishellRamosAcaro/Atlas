@@ -582,5 +582,5 @@ Recibir el payload del formulario (nombre, email, empresa, mensaje), validarlo, 
   En producción pueden deshabilitarse mediante variable de entorno para evitar exponer la estructura interna de la API.
 
 - **Documentación de gobierno técnico:**  
-  Las reglas de ingeniería, seguridad, testing y despliegue se definen en el archivo `AGENTS.md` situado en la raíz del repositorio.  
-  Este documento actúa como referencia técnica para mantener coherencia en la evolución del backend.
+  Las reglas de ingeniería, seguridad, testing y despliegue se defieron previamente en el archivo `AGENTS.md` situado en la raíz del repositorio.  
+  Este documento actúa como referencia técnica para mantener coherencia en la evolución del backend y cualquier aportación este enmarcada por determinadas reglas.  
