@@ -63,7 +63,7 @@ En consecuencia, la solución actual debe entenderse como una base evolutiva, di
 | **Runtime**      | CPython | 3.12 | Runtime oficial con máxima compatibilidad con librerías C y drivers. |
 
 
-La fecha de la última actualización es **15/03/2026**. Durante el desarrollo se ha hecho mucho hincapié en la actualización y el parcheo de las distintas versiones de las librerías utilizadas para que no haya errores de seguridad. 
+La fecha de la última actualización es **15/03/2026**. Durante el desarrollo se ha hecho mucho hincapié en la actualización y el parcheo de las distintas versiones de las librerías utilizadas para que no haya vulnerabilidades que afecten a la seguridad del proyecto. 
 
 
 ### 2.3 Dependencias futuras
@@ -80,6 +80,8 @@ En el futuro se tiene contemplado utilizar esta librería, ya que, una vez despl
 
 ### 3.1 Instalación en local
 
+Los comandos mostrados en esta documentación se han ejecutado sobre **Ubuntu 24.04 LTS**.  El proyecto debería funcionar en cualquier distribución Linux moderna. 
+
 #### 3.1.1 Descarga del código
 
 El código debe descargarse desde el repositorio público en GitHub: https://github.com/MishellRamosAcaro/Atlas
@@ -92,7 +94,7 @@ A continuación, se describen los pasos necesarios para ejecutar el proyecto en 
 
 2. Clonar el repositorio desde GitHub usando el siguiente comando y verificar, mediante `git status` y `git remote -v`, que el proyecto se ha descargado correctamente:
 
-      ```bash
+```bash
       $ git clone https://github.com/MishellRamosAcaro/Atlas.git
          Cloning into 'Atlas'...
          remote: Enumerating objects: 416, done.
@@ -103,6 +105,7 @@ A continuación, se describen los pasos necesarios para ejecutar el proyecto en 
          Resolving deltas: 100% (213/213), done.
 
       $ cd Atlas
+
       $ git status
          On branch main
          Your branch is up to date with 'origin/main'.
@@ -112,6 +115,8 @@ A continuación, se describen los pasos necesarios para ejecutar el proyecto en 
       $ git remote -v
          origin  https://github.com/MishellRamosAcaro/Atlas.git (fetch)
          origin  https://github.com/MishellRamosAcaro/Atlas.git (push)
+
+```
 
 Si estos comandos se ejecutan sin errores y la salida es igual a la que mostramos el proyecto se ha clonado correctamente.
 
@@ -140,9 +145,7 @@ El archivo `.env.example` contiene la mayoría de variables preconfiguradas para
 
 Desde el directorio raíz del proyecto descargado, se debe crear un entorno virtual de Python para aislar las dependencias del sistema y garantizar que el backend se ejecute con las versiones correctas de las librerías.
 
-A continuación, se activará el entorno virtual y se instalarán todas las dependencias definidas en el archivo `requirements.txt`, que contiene las librerías necesarias para ejecutar Atlas.
-
-Ejecutar los siguientes comandos en la terminal:
+A continuación, se activará el entorno virtual y se instalarán todas las dependencias definidas en el archivo `requirements.txt`, que contiene las librerías necesarias para ejecutar Atlas. Se deben ejecutar estos comandos: 
 
 ```bash
 $ python -m venv .venv
@@ -298,11 +301,8 @@ La estructura actual es sólida para el estado presente y está preparada para e
 
 - Consolidar la **capa de casos de uso**, desplazando la orquestación desde servicios hacia una capa de aplicación más explícita.
 - Completar la transición a **arquitectura hexagonal**, con dependencias externas únicamente a través de puertos definidos.
-- Reorganizar por **bounded contexts** más explícitos si el sistema crece (p. ej. identidad, documentos, extracción y enriquecimiento como dominios independientes).
 - Introducir **eventos de dominio o colas asíncronas** para procesos costosos (extracción, antivirus, enriquecimiento con LLM).
-- Reforzar el aislamiento entre componentes con **contratos internos más estrictos**, sobre todo en flujos de procesamiento documental.
 - Incorporar observabilidad avanzada: **tracing, métricas técnicas y auditoría funcional**.
-- Formalizar decisiones estructurales con **ADRs (Architecture Decision Records)**.
 
 En conjunto, la estructura actual cubre las necesidades presentes de Atlas y establece una base técnica para crecer sin perder control sobre la complejidad del sistema.
 
@@ -555,7 +555,7 @@ Recibir el payload del formulario (nombre, email, empresa, mensaje), validarlo, 
 - **Cumplimiento**: consideraciones GDPR/LOPDGDD; cifrado en tránsito fuera del entorno local.
 
 
-### 6.1 Seguridad, CORS y cabeceras
+## 7. Seguridad, CORS y documentación
 
 - **CORS:**  
   La política de CORS se configura mediante variables de entorno.  
